@@ -39,7 +39,6 @@ public final class ListingEntityMapper {
 				entity.getDescription(),
 				entity.getTradeStatus(),
 				entity.getListingStatus(),
-				entity.isNegotiable(),
 				entity.getLatitude(),
 				entity.getLongitude(),
 				entity.getPlaceName(),

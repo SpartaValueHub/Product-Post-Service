@@ -55,7 +55,7 @@ public class ListingEntity {
 	@Column(name = "condition_grade", nullable = false, length = 100)
 	private String conditionGrade;
 
-	// 가격
+	// 가격 (최소가는 listing.policy.min-price 설정으로 검증)
 	@Column(name = "price", nullable = false)
 	private long price;
 
@@ -72,10 +72,6 @@ public class ListingEntity {
 	@Enumerated(EnumType.STRING)
 	@Column(name = "listing_status", nullable = false, length = 20)
 	private ListingStatus listingStatus;
-
-	// 가격 협상 가능 여부
-	@Column(name = "negotiable", nullable = false)
-	private boolean negotiable;
 
 	// 위도
 	@Column(name = "latitude", nullable = false, precision = 10, scale = 7)
@@ -116,7 +112,6 @@ public class ListingEntity {
 			String description,
 			TradeStatus tradeStatus,
 			ListingStatus listingStatus,
-			boolean negotiable,
 			BigDecimal latitude,
 			BigDecimal longitude,
 			String placeName,
@@ -132,7 +127,6 @@ public class ListingEntity {
 				.description(description)
 				.tradeStatus(tradeStatus)
 				.listingStatus(listingStatus)
-				.negotiable(negotiable)
 				.latitude(latitude)
 				.longitude(longitude)
 				.placeName(placeName)
@@ -152,7 +146,6 @@ public class ListingEntity {
 			String description,
 			TradeStatus tradeStatus,
 			ListingStatus listingStatus,
-			boolean negotiable,
 			BigDecimal latitude,
 			BigDecimal longitude,
 			String placeName,
@@ -167,7 +160,6 @@ public class ListingEntity {
 		this.description = description;
 		this.tradeStatus = tradeStatus;
 		this.listingStatus = listingStatus;
-		this.negotiable = negotiable;
 		this.latitude = latitude;
 		this.longitude = longitude;
 		this.placeName = placeName;

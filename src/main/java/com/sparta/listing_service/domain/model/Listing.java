@@ -46,8 +46,6 @@ public class Listing {
 	private TradeStatus tradeStatus;
 	// 노출 상태
 	private ListingStatus listingStatus;
-	// 가격 협상 가능 여부
-	private boolean negotiable;
 	// 위도
 	private BigDecimal latitude;
 	// 경도
@@ -78,7 +76,6 @@ public class Listing {
 			String description,
 			TradeStatus tradeStatus,
 			ListingStatus listingStatus,
-			boolean negotiable,
 			BigDecimal latitude,
 			BigDecimal longitude,
 			String placeName,
@@ -99,7 +96,6 @@ public class Listing {
 		this.description = description;
 		this.tradeStatus = tradeStatus;
 		this.listingStatus = listingStatus;
-		this.negotiable = negotiable;
 		this.latitude = latitude;
 		this.longitude = longitude;
 		this.placeName = placeName;
@@ -115,7 +111,7 @@ public class Listing {
 		}
 	}
 
-	// 신규 판매글 생성 (등록 시 PUBLIC + SELLING)
+	// 신규 판매글 생성 (등록 시 PUBLIC + SELLING, minPrice는 설정에서 주입)
 	public static Listing create(
 			String listingUuid,
 			String memberUuid,
@@ -124,12 +120,12 @@ public class Listing {
 			String conditionGrade,
 			long price,
 			String description,
-			boolean negotiable,
 			BigDecimal latitude,
 			BigDecimal longitude,
 			String placeName,
 			List<ListingImage> images,
 			List<ListingDocument> documents,
+			long minPrice,
 			Instant createdAt
 	) {
 		validateUuid(listingUuid, "판매글 UUID는 필수입니다.");
@@ -137,7 +133,7 @@ public class Listing {
 		validateUuid(categoryUuid, "카테고리 UUID는 필수입니다.");
 		validateName(listingName);
 		validateConditionGrade(conditionGrade);
-		validatePrice(price);
+		validatePrice(price, minPrice);
 		validateDescription(description);
 		validatePlace(placeName, latitude, longitude);
 		validateImages(images);
@@ -156,7 +152,6 @@ public class Listing {
 				description.trim(),
 				TradeStatus.SELLING,
 				ListingStatus.PUBLIC,
-				negotiable,
 				latitude,
 				longitude,
 				placeName.trim(),
@@ -181,7 +176,6 @@ public class Listing {
 			String description,
 			TradeStatus tradeStatus,
 			ListingStatus listingStatus,
-			boolean negotiable,
 			BigDecimal latitude,
 			BigDecimal longitude,
 			String placeName,
@@ -211,7 +205,6 @@ public class Listing {
 				description,
 				tradeStatus,
 				listingStatus,
-				negotiable,
 				latitude,
 				longitude,
 				placeName,
@@ -298,9 +291,12 @@ public class Listing {
 		}
 	}
 
-	private static void validatePrice(long price) {
-		if (price <= 0) {
-			throw new IllegalArgumentException("가격은 0보다 커야 합니다.");
+	private static void validatePrice(long price, long minPrice) {
+		if (minPrice < 1) {
+			throw new IllegalArgumentException("최소 판매가 설정이 올바르지 않습니다.");
+		}
+		if (price < minPrice) {
+			throw new IllegalArgumentException("가격은 " + minPrice + "원 이상이어야 합니다.");
 		}
 	}
 
