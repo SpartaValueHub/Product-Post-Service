@@ -98,7 +98,7 @@ Eureka Dashboard (`http://localhost:8761`) 에서 `PRODUCT-POST-SERVICE` 등록�
 ## 패키지 구조 (Hexagonal)
 
 ```
-com.sparta.listing_service/
+com.sparta.product_post_service/
 ├── domain/model/              # 도메인 모델
 ├── application/
 │   ├── service/               # Use Case 구현
