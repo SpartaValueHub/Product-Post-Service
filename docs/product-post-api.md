@@ -34,6 +34,7 @@ Listing-Service 판매글(ProductPost) API 명세서입니다.
 | 400 | VALIDATION_FAILED | Bean Validation 실패 (`fieldErrors` 포함) |
 | 400 | INVALID_ARGUMENT | Domain/형식 오류, JSON 파싱 실패 |
 | 401 | UNAUTHORIZED | `X-Member-Uuid` 없음·공백 |
+| 404 | PRODUCT_POST_NOT_FOUND | 판매글 없음, 또는 숨김·삭제되어 미노출 |
 
 ---
 
@@ -153,3 +154,65 @@ Listing-Service 판매글(ProductPost) API 명세서입니다.
 | 400 | VALIDATION_FAILED | 요청 필드 검증 실패 (최소가 미만 포함, 설정값 기준) |
 | 400 | INVALID_ARGUMENT | Domain 규칙 위반 등 |
 | 401 | UNAUTHORIZED | `X-Member-Uuid` 없음 |
+
+---
+
+## GET /api/v1/product-posts/{productPostUuid}
+
+### Summary
+판매글 상세를 조회한다. (FO, 공개글만)
+
+### Method · Path
+`GET /api/v1/product-posts/{productPostUuid}`
+
+### Auth
+불필요. 미인증 사용자도 공개 판매글을 조회할 수 있다.
+
+### Request
+
+| 위치 | 필드 | 타입 | 필수 | 제약 |
+|------|------|------|------|------|
+| Path | productPostUuid | string | Y | 판매글 UUID |
+
+### Response
+`200 OK`
+
+등록 API 응답과 동일 필드. 활성 이미지만 `sortOrder` 오름차순으로 포함하며, 삭제된 이미지는 제외한다.
+
+```json
+{
+  "productPostUuid": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+  "memberUuid": "22222222-2222-2222-2222-222222222222",
+  "categoryUuid": "11111111-1111-1111-1111-111111111111",
+  "productPostName": "빈티지 백",
+  "conditionGrade": "A",
+  "price": 550000,
+  "description": "상태 좋은 빈티지 백입니다.",
+  "tradeStatus": "SELLING",
+  "productPostStatus": "PUBLIC",
+  "latitude": 37.5665,
+  "longitude": 126.9780,
+  "placeName": "서울역",
+  "createdAt": "2026-08-10T01:00:00Z",
+  "images": [
+    {
+      "productPostImageUuid": "img-uuid",
+      "imageUrl": "https://cdn.example.com/product-posts/1.jpg",
+      "sortOrder": 1
+    }
+  ],
+  "documents": [
+    {
+      "productPostDocumentUuid": "doc-uuid",
+      "documentType": "RECEIPT",
+      "imageUrl": "https://cdn.example.com/docs/receipt.jpg"
+    }
+  ]
+}
+```
+
+### Errors
+
+| status | code | 의미 |
+|--------|------|------|
+| 404 | PRODUCT_POST_NOT_FOUND | UUID 없음, 또는 HIDDEN·DELETED (존재 여부 구분 없음) |

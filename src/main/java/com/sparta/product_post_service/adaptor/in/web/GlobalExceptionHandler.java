@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.sparta.product_post_service.application.exception.UnauthorizedException;
+import com.sparta.product_post_service.domain.exception.ProductPostNotFoundException;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -71,6 +72,15 @@ public class GlobalExceptionHandler {
 			HttpServletRequest request
 	) {
 		return buildError(HttpStatus.UNAUTHORIZED, ex.getCode(), ex.getMessage(), request.getRequestURI());
+	}
+
+	// 판매글 없음·숨김·삭제 (일반 사용자 미노출)
+	@ExceptionHandler(ProductPostNotFoundException.class)
+	public ResponseEntity<Map<String, Object>> handleProductPostNotFound(
+			ProductPostNotFoundException ex,
+			HttpServletRequest request
+	) {
+		return buildError(HttpStatus.NOT_FOUND, ex.getCode(), ex.getMessage(), request.getRequestURI());
 	}
 
 	// fieldErrors 한 건 변환

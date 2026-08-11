@@ -1,6 +1,8 @@
 package com.sparta.product_post_service.adaptor.in.web;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -12,6 +14,7 @@ import com.sparta.product_post_service.adaptor.in.web.mapper.ProductPostWebMappe
 import com.sparta.product_post_service.adaptor.in.web.vo.CreateProductPostRequestVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostSummaryResponseVo;
 import com.sparta.product_post_service.application.port.in.CreateProductPostUseCase;
+import com.sparta.product_post_service.application.port.in.GetProductPostUseCase;
 import com.sparta.product_post_service.application.port.in.dto.ProductPostSummaryDto;
 
 import jakarta.validation.Valid;
@@ -25,6 +28,8 @@ public class ProductPostController {
 
 	// 판매글 등록 UseCase
 	private final CreateProductPostUseCase createProductPostUseCase;
+	// 판매글 상세 조회 UseCase
+	private final GetProductPostUseCase getProductPostUseCase;
 
 	// 판매글 등록 (FO)
 	@PostMapping
@@ -38,5 +43,12 @@ public class ProductPostController {
 				ProductPostWebMapper.toCreateCommand(request)
 		);
 		return ProductPostWebMapper.toSummaryResponse(created);
+	}
+
+	// 판매글 상세 조회 (FO, 공개글만)
+	@GetMapping("/{productPostUuid}")
+	public ProductPostSummaryResponseVo getDetail(@PathVariable String productPostUuid) {
+		ProductPostSummaryDto detail = getProductPostUseCase.getByUuid(productPostUuid);
+		return ProductPostWebMapper.toSummaryResponse(detail);
 	}
 }
