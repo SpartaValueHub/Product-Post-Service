@@ -1,4 +1,4 @@
-# Listing Service
+# ProductPost Service
 
 ValueHub MSA 리스팅(listing) 마이크로서비스입니다.
 
