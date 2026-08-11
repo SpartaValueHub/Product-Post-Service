@@ -66,9 +66,8 @@ Listing-Service 판매글(ProductPost) API 명세서입니다.
 | latitude | number | Y | 위도 |
 | longitude | number | Y | 경도 |
 | placeName | string | Y | 최대 100자 |
-| images | array | Y | 1~10개 |
+| images | array | Y | 1~10개. **배열 순서 = 노출 순서**(0번 인덱스가 대표/썸네일). 서버가 `sort_order` 1..n 부여 |
 | images[].imageUrl | string | Y | 최대 500자 (업로드 URL) |
-| images[].sortOrder | number | Y | 1 이상 (최소값이 대표/썸네일) |
 | documents | array | N | 선택 |
 | documents[].documentType | string | Y(항목 시) | `WARRANTY` \| `RECEIPT` \| `APPRAISAL` |
 | documents[].imageUrl | string | Y(항목 시) | 최대 500자 |
@@ -84,7 +83,8 @@ Listing-Service 판매글(ProductPost) API 명세서입니다.
   "longitude": 126.9780,
   "placeName": "서울역",
   "images": [
-    { "imageUrl": "https://cdn.example.com/listings/1.jpg", "sortOrder": 1 }
+    { "imageUrl": "https://cdn.example.com/product-posts/1.jpg" },
+    { "imageUrl": "https://cdn.example.com/product-posts/2.jpg" }
   ],
   "documents": [
     { "documentType": "RECEIPT", "imageUrl": "https://cdn.example.com/docs/receipt.jpg" }
@@ -110,7 +110,7 @@ Listing-Service 판매글(ProductPost) API 명세서입니다.
 | longitude | number | 경도 |
 | placeName | string | 장소명 |
 | createdAt | string | ISO-8601 |
-| images | array | 저장된 이미지 요약 |
+| images | array | 저장된 이미지 요약 (`sortOrder` 포함, 서버가 부여한 값) |
 | documents | array | 저장된 서류 요약 |
 
 ```json
@@ -131,7 +131,7 @@ Listing-Service 판매글(ProductPost) API 명세서입니다.
   "images": [
     {
       "productPostImageUuid": "img-uuid",
-      "imageUrl": "https://cdn.example.com/listings/1.jpg",
+      "imageUrl": "https://cdn.example.com/product-posts/1.jpg",
       "sortOrder": 1
     }
   ],
@@ -145,6 +145,7 @@ Listing-Service 판매글(ProductPost) API 명세서입니다.
 }
 ```
 
+> 요청에는 `sortOrder`가 없고, 응답의 `sortOrder`는 배열 위치 기준으로 서버가 채운 값이다.
 ### Errors
 
 | status | code | 의미 |

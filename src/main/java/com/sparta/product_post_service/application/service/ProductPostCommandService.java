@@ -2,6 +2,7 @@ package com.sparta.product_post_service.application.service;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -46,7 +47,7 @@ public class ProductPostCommandService implements CreateProductPostUseCase {
 		List<ProductPostImage> images = toImages(command.getImages(), createdAt);
 		List<ProductPostDocument> documents = toDocuments(command.getDocuments(), createdAt);
 
-		ProductPost listing = ProductPost.create(
+		ProductPost productPost = ProductPost.create(
 				newUuid(),
 				memberUuid.trim(),
 				command.getCategoryUuid(),
@@ -63,7 +64,7 @@ public class ProductPostCommandService implements CreateProductPostUseCase {
 				createdAt
 		);
 
-		ProductPost saved = productPostSavePort.save(listing);
+		ProductPost saved = productPostSavePort.save(productPost);
 		return toSummary(saved);
 	}
 
@@ -74,19 +75,22 @@ public class ProductPostCommandService implements CreateProductPostUseCase {
 		}
 	}
 
-	// 이미지 Command → Domain
+	// 이미지 Command → Domain (배열 인덱스+1 이 sort_order, 0번이 대표/썸네일)
 	private List<ProductPostImage> toImages(List<CreateProductPostImageCommand> images, Instant createdAt) {
 		if (images == null) {
 			return List.of();
 		}
-		return images.stream()
-				.map(image -> ProductPostImage.create(
-						newUuid(),
-						image.getImageUrl(),
-						image.getSortOrder(),
-						createdAt
-				))
-				.toList();
+		List<ProductPostImage> result = new ArrayList<>(images.size());
+		for (int i = 0; i < images.size(); i++) {
+			CreateProductPostImageCommand image = images.get(i);
+			result.add(ProductPostImage.create(
+					newUuid(),
+					image.getImageUrl(),
+					i + 1,
+					createdAt
+			));
+		}
+		return List.copyOf(result);
 	}
 
 	// 서류 Command → Domain

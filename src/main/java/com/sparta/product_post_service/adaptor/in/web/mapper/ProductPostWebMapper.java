@@ -77,7 +77,6 @@ public final class ProductPostWebMapper {
 	private static CreateProductPostImageCommand toImageCommand(CreateProductPostImageRequestVo request) {
 		return CreateProductPostImageCommand.builder()
 				.imageUrl(request.getImageUrl())
-				.sortOrder(request.getSortOrder())
 				.build();
 	}
 
