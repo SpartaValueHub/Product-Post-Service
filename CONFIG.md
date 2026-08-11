@@ -1,4 +1,4 @@
-# Listing Service 설정 컨벤션
+# ProductPost Service 설정 컨벤션
 
 Discovery / Gateway / Auth-Service 와 동일한 YAML 프로필 구조를 사용합니다.
 
@@ -36,12 +36,12 @@ Auth-Service 와 **동일한 MySQL 인스턴스**를 사용하며, **스키마�
 | auth-service | `auth_db` |
 | member-service | `member_db` |
 | member-regions-service | `member_regions_db` |
-| listing-service | `listing_db` |
+| listing-service | `product_post_db` |
 
 로컬 JDBC URL 예시:
 
 ```
-jdbc:mysql://localhost:3307/listing_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+jdbc:mysql://localhost:3307/product_post_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=UTF-8
 ```
 
 ## Secret 관리 규칙
@@ -68,12 +68,12 @@ cp .env.example .env
 # 1. Discovery 실행
 cd ../discovery && ./gradlew bootRun
 
-# 2. .env 설정 후 Listing Service 실행
+# 2. .env 설정 후 ProductPost Service 실행
 cd ../listing-service && ./gradlew bootRun
 ```
 
 - `bootRun` 은 프로젝트 루트의 `.env` 를 자동 로드합니다.
-- IDE에서 실행할 때는 **Run Configuration** `ListingServiceApplication` 을 사용하거나, `ListingServiceApplication.java` 에서 main 실행 시 Working directory 가 프로젝트 루트인지 확인하세요.
+- IDE에서 실행할 때는 **Run Configuration** `ProductPostServiceApplication` 을 사용하거나, `ProductPostServiceApplication.java` 에서 main 실행 시 Working directory 가 프로젝트 루트인지 확인하세요.
 - `application-local.yml` 이 `optional:file:.env[.properties]` 를 import 하므로 IDE main 실행 시에도 `.env` 가 로드됩니다.
 
 Eureka Dashboard (`http://localhost:8761`) 에서 `LISTING-SERVICE` 등록을 확인합니다.
@@ -82,7 +82,7 @@ Eureka Dashboard (`http://localhost:8761`) 에서 `LISTING-SERVICE` 등록을 �
 
 | 변수 | 설명 |
 |------|------|
-| `SPRING_DATASOURCE_URL` | MySQL JDBC URL (`listing_db` 스키마) |
+| `SPRING_DATASOURCE_URL` | MySQL JDBC URL (`product_post_db` 스키마) |
 | `SPRING_DATASOURCE_USERNAME` | DB 사용자 |
 | `SPRING_DATASOURCE_PASSWORD` | DB 비밀번호 |
 
@@ -90,7 +90,7 @@ Eureka Dashboard (`http://localhost:8761`) 에서 `LISTING-SERVICE` 등록을 �
 
 | 변수 | 설명 |
 |------|------|
-| `SPRING_DATASOURCE_URL` | MySQL JDBC URL (`listing_db` 스키마) |
+| `SPRING_DATASOURCE_URL` | MySQL JDBC URL (`product_post_db` 스키마) |
 | `SPRING_DATASOURCE_USERNAME` | DB 사용자 |
 | `SPRING_DATASOURCE_PASSWORD` | DB 비밀번호 |
 | `EUREKA_CLIENT_SERVICEURL_DEFAULTZONE` | Eureka Server URL |

@@ -1,8 +1,0 @@
-package com.sparta.listing_service.domain.model;
-
-// 판매글 노출 상태
-public enum ListingStatus {
-	PUBLIC,
-	HIDDEN,
-	DELETED
-}

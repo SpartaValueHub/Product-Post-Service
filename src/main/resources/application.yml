@@ -14,9 +14,9 @@ spring:
     open-in-view: false
 
 # 판매글 서비스 정책 (환경별로 덮어쓸 수 있음)
-listing:
+product-post:
   policy:
-    min-price: ${LISTING_MIN_PRICE:500000}
+    min-price: ${PRODUCT_POST_MIN_PRICE:500000}
 
 eureka:
   client:
