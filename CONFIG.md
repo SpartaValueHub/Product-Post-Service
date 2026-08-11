@@ -24,7 +24,7 @@ spring.profiles.active: ${SPRING_PROFILES_ACTIVE:local}
 ## 포트 및 Eureka
 
 - `server.port: 0` — OS가 할당하는 사용 가능한 랜덤 포트
-- Eureka instance-id: `서비스명:실제포트` (예: `listing-service:51234`) — 기동 로그와 Eureka 대시보드에서 확인
+- Eureka instance-id: `서비스명:실제포트` (예: `product-post-service:51234`) — 기동 로그와 Eureka 대시보드에서 확인
 - `eureka.instance.prefer-ip-address: true`
 
 ## DB (MSA 스키마 분리)
@@ -36,7 +36,7 @@ Auth-Service 와 **동일한 MySQL 인스턴스**를 사용하며, **스키마�
 | auth-service | `auth_db` |
 | member-service | `member_db` |
 | member-regions-service | `member_regions_db` |
-| listing-service | `product_post_db` |
+| product-post-service | `product_post_db` |
 
 로컬 JDBC URL 예시:
 
@@ -69,14 +69,14 @@ cp .env.example .env
 cd ../discovery && ./gradlew bootRun
 
 # 2. .env 설정 후 ProductPost Service 실행
-cd ../listing-service && ./gradlew bootRun
+cd ../Listing-Service && ./gradlew bootRun
 ```
 
 - `bootRun` 은 프로젝트 루트의 `.env` 를 자동 로드합니다.
 - IDE에서 실행할 때는 **Run Configuration** `ProductPostServiceApplication` 을 사용하거나, `ProductPostServiceApplication.java` 에서 main 실행 시 Working directory 가 프로젝트 루트인지 확인하세요.
 - `application-local.yml` 이 `optional:file:.env[.properties]` 를 import 하므로 IDE main 실행 시에도 `.env` 가 로드됩니다.
 
-Eureka Dashboard (`http://localhost:8761`) 에서 `LISTING-SERVICE` 등록을 확인합니다.
+Eureka Dashboard (`http://localhost:8761`) 에서 `PRODUCT-POST-SERVICE` 등록을 확인합니다.
 
 ## 필수 환경변수 (local)
 

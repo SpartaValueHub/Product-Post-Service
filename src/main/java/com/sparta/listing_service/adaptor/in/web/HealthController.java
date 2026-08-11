@@ -11,7 +11,7 @@ public class HealthController {
 	@GetMapping("/health/test")
 	public Map<String, String> test() {
 		return Map.of(
-				"service", "listing-service",
+				"service", "product-post-service",
 				"status", "UP"
 		);
 	}

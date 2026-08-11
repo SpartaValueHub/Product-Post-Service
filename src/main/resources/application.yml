@@ -1,6 +1,6 @@
 spring:
   application:
-    name: listing-service
+    name: product-post-service
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
   jpa:
@@ -24,7 +24,7 @@ eureka:
     fetch-registry: true
   instance:
     prefer-ip-address: true
-    # instance-id는 EurekaInstancePortCustomizer에서 실제 할당 포트로 설정 (예: listing-service:51234)
+    # instance-id는 EurekaInstancePortCustomizer에서 실제 할당 포트로 설정 (예: product-post-service:51234)
 
 springdoc:
   api-docs:
