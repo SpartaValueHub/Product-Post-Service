@@ -216,3 +216,78 @@ Listing-Service 판매글(ProductPost) API 명세서입니다.
 | status | code | 의미 |
 |--------|------|------|
 | 404 | PRODUCT_POST_NOT_FOUND | UUID 없음, 또는 HIDDEN·DELETED (존재 여부 구분 없음) |
+
+---
+
+## GET /api/v1/product-posts
+
+### Summary
+판매글 목록을 조회한다. (FO 홈·헤더 검색·필터·페이징)
+
+### Method · Path
+`GET /api/v1/product-posts`
+
+### Auth
+불필요.
+
+### Request (Query)
+
+| 필드 | 타입 | 필수 | 제약 |
+|------|------|------|------|
+| categoryUuids | string[] | N | 리프 카테고리 UUID. 없으면 전체(All). Luxury「전체상품」은 FE가 하위 리프 UUID를 모두 전달 |
+| keyword | string | N | 상품명 부분 일치. 빈 값이면 미적용 |
+| minPrice | number | N | 0 이상. maxPrice보다 클 수 없음 |
+| maxPrice | number | N | 0 이상 |
+| conditionGrades | string[] | N | `S`/`A`/`B`/`C`. 없으면 전체 |
+| documentTypes | string[] | N | `WARRANTY`/`RECEIPT`/`APPRAISAL`. 선택값 중 **하나라도** 가진 글(OR). 삭제된 서류 제외 |
+| page | number | N | 1-based, 기본 `1` |
+| size | number | N | 기본 `20`, 최대 `50` |
+
+정렬: `COALESCE(bumpedAt, createdAt) DESC` (끌올 반영 최신순)  
+노출: `productPostStatus=PUBLIC` 이고 `tradeStatus` ∈ `SELLING` \| `RESERVED` \| `SOLD_OUT` (HIDDEN·DELETED 제외)
+
+```http
+GET /api/v1/product-posts?categoryUuids=uuid1&documentTypes=RECEIPT&documentTypes=WARRANTY&page=1&size=20
+```
+
+### Response
+`200 OK`
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| content | array | 카드 목록 |
+| content[].productPostUuid | string | 판매글 UUID |
+| content[].productPostName | string | 제목 |
+| content[].price | number | 가격 |
+| content[].tradeStatus | string | `SELLING`/`RESERVED`/`SOLD_OUT` (카드 뱃지) |
+| content[].listedAt | string | 목록 기준 시각 ISO-8601 (FE 상대 시간) |
+| content[].thumbnailUrl | string\|null | 대표 이미지 URL |
+| page | number | 현재 페이지 (1-based) |
+| size | number | 페이지 크기 |
+| totalElements | number | 전체 건수 |
+| totalPages | number | 전체 페이지 수 |
+
+```json
+{
+  "content": [
+    {
+      "productPostUuid": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      "productPostName": "판매글 제목입니다",
+      "price": 1500000,
+      "tradeStatus": "SELLING",
+      "listedAt": "2026-08-12T01:00:00Z",
+      "thumbnailUrl": "https://cdn.example.com/product-posts/1.jpg"
+    }
+  ],
+  "page": 1,
+  "size": 20,
+  "totalElements": 48,
+  "totalPages": 3
+}
+```
+
+### Errors
+
+| status | code | 의미 |
+|--------|------|------|
+| 400 | INVALID_ARGUMENT | page/size/가격 범위/등급/서류 종류 값 오류 |
