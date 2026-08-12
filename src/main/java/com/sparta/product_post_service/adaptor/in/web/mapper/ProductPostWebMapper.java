@@ -5,12 +5,17 @@ import java.util.List;
 import com.sparta.product_post_service.adaptor.in.web.vo.CreateProductPostDocumentRequestVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.CreateProductPostImageRequestVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.CreateProductPostRequestVo;
+import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostCardPageResponseVo;
+import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostCardResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostDocumentResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostImageResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostSummaryResponseVo;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostCommand;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostDocumentCommand;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostImageCommand;
+import com.sparta.product_post_service.application.port.in.dto.ListProductPostsQuery;
+import com.sparta.product_post_service.application.port.in.dto.ProductPostCardDto;
+import com.sparta.product_post_service.application.port.in.dto.ProductPostCardPageDto;
 import com.sparta.product_post_service.application.port.in.dto.ProductPostDocumentSummaryDto;
 import com.sparta.product_post_service.application.port.in.dto.ProductPostImageSummaryDto;
 import com.sparta.product_post_service.application.port.in.dto.ProductPostSummaryDto;
@@ -43,6 +48,55 @@ public final class ProductPostWebMapper {
 				.placeName(request.getPlaceName())
 				.images(images)
 				.documents(documents)
+				.build();
+	}
+
+	// 목록 쿼리 파라미터 → Application Query
+	public static ListProductPostsQuery toListQuery(
+			List<String> categoryUuids,
+			String keyword,
+			Long minPrice,
+			Long maxPrice,
+			List<String> conditionGrades,
+			List<String> documentTypes,
+			int page,
+			int size
+	) {
+		return ListProductPostsQuery.builder()
+				.categoryUuids(categoryUuids)
+				.keyword(keyword)
+				.minPrice(minPrice)
+				.maxPrice(maxPrice)
+				.conditionGrades(conditionGrades)
+				.documentTypes(documentTypes)
+				.page(page)
+				.size(size)
+				.build();
+	}
+
+	// 목록 페이지 DTO → 응답 VO
+	public static ProductPostCardPageResponseVo toCardPageResponse(ProductPostCardPageDto dto) {
+		List<ProductPostCardResponseVo> content = dto.getContent().stream()
+				.map(ProductPostWebMapper::toCardResponse)
+				.toList();
+		return ProductPostCardPageResponseVo.builder()
+				.content(content)
+				.page(dto.getPage())
+				.size(dto.getSize())
+				.totalElements(dto.getTotalElements())
+				.totalPages(dto.getTotalPages())
+				.build();
+	}
+
+	// 목록 카드 DTO → 응답 VO
+	public static ProductPostCardResponseVo toCardResponse(ProductPostCardDto dto) {
+		return ProductPostCardResponseVo.builder()
+				.productPostUuid(dto.getProductPostUuid())
+				.productPostName(dto.getProductPostName())
+				.price(dto.getPrice())
+				.tradeStatus(dto.getTradeStatus())
+				.listedAt(dto.getListedAt())
+				.thumbnailUrl(dto.getThumbnailUrl())
 				.build();
 	}
 
