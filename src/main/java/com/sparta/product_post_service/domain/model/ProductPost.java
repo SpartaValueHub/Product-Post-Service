@@ -250,6 +250,44 @@ public class ProductPost {
 		this.bumpedAt = bumpedAt;
 	}
 
+	// 판매글 내용 수정 (SELLING 상태만, 이미지·서류는 전체 교체)
+	public void updateContent(
+			String categoryUuid,
+			String productPostName,
+			String conditionGrade,
+			long price,
+			String description,
+			BigDecimal latitude,
+			BigDecimal longitude,
+			String placeName,
+			List<ProductPostImage> replacementImages,
+			List<ProductPostDocument> replacementDocuments,
+			long minPrice,
+			Instant updatedAt
+	) {
+		assertNotDeleted();
+		assertSellingForUpdate();
+		validateUuid(categoryUuid, "카테고리 UUID는 필수입니다.");
+		validateName(productPostName);
+		validateConditionGrade(conditionGrade);
+		validatePrice(price, minPrice);
+		validateDescription(description);
+		validatePlace(placeName, latitude, longitude);
+		Objects.requireNonNull(updatedAt, "수정 시각은 필수입니다.");
+
+		this.categoryUuid = categoryUuid.trim();
+		this.productPostName = productPostName.trim();
+		this.conditionGrade = conditionGrade.trim().toUpperCase();
+		this.price = price;
+		this.description = description.trim();
+		this.latitude = latitude;
+		this.longitude = longitude;
+		this.placeName = placeName.trim();
+		replaceImages(replacementImages, updatedAt);
+		replaceDocuments(replacementDocuments, updatedAt);
+		this.updatedAt = updatedAt;
+	}
+
 	// 활성 이미지만
 	public List<ProductPostImage> activeImages() {
 		return images.stream().filter(ProductPostImage::isActive).toList();
@@ -264,6 +302,35 @@ public class ProductPost {
 		if (productPostStatus == ProductPostStatus.DELETED || deletedAt != null) {
 			throw new IllegalArgumentException("삭제된 판매글은 변경할 수 없습니다.");
 		}
+	}
+
+	// 수정은 판매중 상태에서만 허용 (예약·거래완료는 별도 API)
+	private void assertSellingForUpdate() {
+		if (tradeStatus != TradeStatus.SELLING) {
+			throw new IllegalArgumentException("판매중 상태에서만 수정할 수 있습니다.");
+		}
+	}
+
+	// 기존 활성 이미지 soft delete 후 신규 목록으로 교체
+	private void replaceImages(List<ProductPostImage> replacementImages, Instant updatedAt) {
+		validateImages(replacementImages);
+		for (ProductPostImage image : images) {
+			if (image.isActive()) {
+				image.softDelete(updatedAt);
+			}
+		}
+		images.addAll(replacementImages);
+	}
+
+	// 기존 활성 서류 soft delete 후 신규 목록으로 교체
+	private void replaceDocuments(List<ProductPostDocument> replacementDocuments, Instant updatedAt) {
+		List<ProductPostDocument> safeDocuments = replacementDocuments == null ? List.of() : replacementDocuments;
+		for (ProductPostDocument document : documents) {
+			if (document.isActive()) {
+				document.softDelete(updatedAt);
+			}
+		}
+		documents.addAll(safeDocuments);
 	}
 
 	private static void validateUuid(String value, String message) {

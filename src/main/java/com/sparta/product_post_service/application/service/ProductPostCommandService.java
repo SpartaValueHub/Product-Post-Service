@@ -9,29 +9,37 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.sparta.product_post_service.application.exception.ForbiddenException;
 import com.sparta.product_post_service.application.exception.UnauthorizedException;
 import com.sparta.product_post_service.application.port.in.CreateProductPostUseCase;
+import com.sparta.product_post_service.application.port.in.UpdateProductPostUseCase;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostCommand;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostDocumentCommand;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostImageCommand;
 import com.sparta.product_post_service.application.port.in.dto.ProductPostDocumentSummaryDto;
 import com.sparta.product_post_service.application.port.in.dto.ProductPostImageSummaryDto;
 import com.sparta.product_post_service.application.port.in.dto.ProductPostSummaryDto;
+import com.sparta.product_post_service.application.port.in.dto.UpdateProductPostCommand;
+import com.sparta.product_post_service.application.port.out.ProductPostLoadPort;
 import com.sparta.product_post_service.application.port.out.ProductPostSavePort;
 import com.sparta.product_post_service.config.ProductPostPolicyProperties;
+import com.sparta.product_post_service.domain.exception.ProductPostNotFoundException;
 import com.sparta.product_post_service.domain.model.ProductPost;
 import com.sparta.product_post_service.domain.model.ProductPostDocument;
 import com.sparta.product_post_service.domain.model.ProductPostImage;
+import com.sparta.product_post_service.domain.model.ProductPostStatus;
 
 import lombok.RequiredArgsConstructor;
 
 // 판매글 쓰기 Application Service
 @Service
 @RequiredArgsConstructor
-public class ProductPostCommandService implements CreateProductPostUseCase {
+public class ProductPostCommandService implements CreateProductPostUseCase, UpdateProductPostUseCase {
 
 	// 판매글 저장 Port
 	private final ProductPostSavePort productPostSavePort;
+	// 판매글 조회 Port (수정 시 기존 데이터 로드)
+	private final ProductPostLoadPort productPostLoadPort;
 	// 생성 시각용 시계 (테스트 교체 가능)
 	private final Clock clock;
 	// 판매글 정책 (최소가 등)
@@ -66,6 +74,53 @@ public class ProductPostCommandService implements CreateProductPostUseCase {
 
 		ProductPost saved = productPostSavePort.save(productPost);
 		return toSummary(saved);
+	}
+
+	// 판매글 수정 (본인·SELLING·미삭제만)
+	@Override
+	@Transactional
+	public ProductPostSummaryDto update(String memberUuid, String productPostUuid, UpdateProductPostCommand command) {
+		requireMemberUuid(memberUuid);
+
+		if (productPostUuid == null || productPostUuid.isBlank()) {
+			throw new ProductPostNotFoundException("판매글을 찾을 수 없습니다.");
+		}
+
+		ProductPost existing = productPostLoadPort.findByUuid(productPostUuid.trim())
+				.filter(this::isUpdatable)
+				.orElseThrow(() -> new ProductPostNotFoundException("판매글을 찾을 수 없습니다."));
+
+		if (!existing.getMemberUuid().equals(memberUuid.trim())) {
+			throw new ForbiddenException("판매글을 수정할 권한이 없습니다.");
+		}
+
+		Instant updatedAt = Instant.now(clock);
+		List<ProductPostImage> images = toImages(command.getImages(), updatedAt);
+		List<ProductPostDocument> documents = toDocuments(command.getDocuments(), updatedAt);
+
+		existing.updateContent(
+				command.getCategoryUuid(),
+				command.getProductPostName(),
+				command.getConditionGrade(),
+				command.getPrice(),
+				command.getDescription(),
+				command.getLatitude(),
+				command.getLongitude(),
+				command.getPlaceName(),
+				images,
+				documents,
+				productPostPolicyProperties.minPrice(),
+				updatedAt
+		);
+
+		ProductPost saved = productPostSavePort.update(existing);
+		return toSummary(saved);
+	}
+
+	// 수정 대상 조회 가능 여부 (삭제·DELETED 제외, HIDDEN 허용)
+	private boolean isUpdatable(ProductPost productPost) {
+		return productPost.getDeletedAt() == null
+				&& productPost.getProductPostStatus() != ProductPostStatus.DELETED;
 	}
 
 	// Gateway 헤더 누락 시 인증 실패로 처리
@@ -108,16 +163,16 @@ public class ProductPostCommandService implements CreateProductPostUseCase {
 				.toList();
 	}
 
-	// Domain → 요약 DTO
+	// Domain → 요약 DTO (활성 이미지·서류만)
 	private ProductPostSummaryDto toSummary(ProductPost listing) {
-		List<ProductPostImageSummaryDto> images = listing.getImages().stream()
+		List<ProductPostImageSummaryDto> images = listing.activeImages().stream()
 				.map(image -> ProductPostImageSummaryDto.builder()
 						.productPostImageUuid(image.getProductPostImageUuid())
 						.imageUrl(image.getImageUrl())
 						.sortOrder(image.getSortOrder())
 						.build())
 				.toList();
-		List<ProductPostDocumentSummaryDto> documents = listing.getDocuments().stream()
+		List<ProductPostDocumentSummaryDto> documents = listing.activeDocuments().stream()
 				.map(document -> ProductPostDocumentSummaryDto.builder()
 						.productPostDocumentUuid(document.getProductPostDocumentUuid())
 						.documentType(document.getDocumentType())

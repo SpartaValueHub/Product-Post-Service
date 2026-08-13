@@ -34,6 +34,7 @@ Listing-Service 판매글(ProductPost) API 명세서입니다.
 | 400 | VALIDATION_FAILED | Bean Validation 실패 (`fieldErrors` 포함) |
 | 400 | INVALID_ARGUMENT | Domain/형식 오류, JSON 파싱 실패 |
 | 401 | UNAUTHORIZED | `X-Member-Uuid` 없음·공백 |
+| 403 | FORBIDDEN | 판매자 본인이 아님 |
 | 404 | PRODUCT_POST_NOT_FOUND | 판매글 없음, 또는 숨김·삭제되어 미노출 |
 
 ---
@@ -154,6 +155,80 @@ Listing-Service 판매글(ProductPost) API 명세서입니다.
 | 400 | VALIDATION_FAILED | 요청 필드 검증 실패 (최소가 미만 포함, 설정값 기준) |
 | 400 | INVALID_ARGUMENT | Domain 규칙 위반 등 |
 | 401 | UNAUTHORIZED | `X-Member-Uuid` 없음 |
+
+---
+
+## PUT /api/v1/product-posts/{productPostUuid}
+
+### Summary
+판매글을 수정한다. (FO, 판매자 본인)
+
+### Method · Path
+`PUT /api/v1/product-posts/{productPostUuid}`
+
+### Auth
+필요. Gateway가 넣는 헤더:
+
+| Header | 필수 | 설명 |
+|--------|------|------|
+| `X-Member-Uuid` | Y | 판매자 회원 UUID (본인 글만 수정) |
+
+### Request
+
+| 위치 | 필드 | 타입 | 필수 | 제약 |
+|------|------|------|------|------|
+| Path | productPostUuid | string | Y | 판매글 UUID |
+| Body | categoryUuid | string | Y | 리프 카테고리 UUID |
+| Body | productPostName | string | Y | 2~100자 |
+| Body | conditionGrade | string | Y | S / A / B / C |
+| Body | price | number | Y | `product-post.policy.min-price` 이상 |
+| Body | description | string | Y | 최대 2000자 |
+| Body | latitude | number | Y | 위도 |
+| Body | longitude | number | Y | 경도 |
+| Body | placeName | string | Y | 최대 100자 |
+| Body | images | array | Y | 1~10개. **전체 교체**. 배열 순서 = 노출 순서, 빠진 기존 이미지는 soft delete |
+| Body | images[].imageUrl | string | Y | 최대 500자 |
+| Body | documents | array | N | **전체 교체**. 빈 배열이면 기존 서류 전부 soft delete |
+| Body | documents[].documentType | string | Y(항목 시) | `WARRANTY` \| `RECEIPT` \| `APPRAISAL` |
+| Body | documents[].imageUrl | string | Y(항목 시) | 최대 500자 |
+
+수정 가능 조건:
+- `tradeStatus` = `SELLING` (예약중·거래완료는 수정 불가, 거래상태 API 별도)
+- `productPostStatus` = `PUBLIC` 또는 `HIDDEN` (삭제·DELETED 불가)
+- 판매자 본인 (`X-Member-Uuid` = 글의 `memberUuid`)
+
+```json
+{
+  "categoryUuid": "11111111-1111-1111-1111-111111111111",
+  "productPostName": "빈티지 백 (수정)",
+  "conditionGrade": "A",
+  "price": 520000,
+  "description": "가격 조정했습니다.",
+  "latitude": 37.5665,
+  "longitude": 126.9780,
+  "placeName": "서울역",
+  "images": [
+    { "imageUrl": "https://cdn.example.com/product-posts/1-new.jpg" },
+    { "imageUrl": "https://cdn.example.com/product-posts/2-new.jpg" }
+  ],
+  "documents": []
+}
+```
+
+### Response
+`200 OK`
+
+등록 API 응답과 동일 필드 (`tradeStatus`·`productPostStatus`는 변경되지 않음).
+
+### Errors
+
+| status | code | 의미 |
+|--------|------|------|
+| 400 | VALIDATION_FAILED | 요청 필드 검증 실패 |
+| 400 | INVALID_ARGUMENT | Domain 규칙 위반 (예: 판매중이 아님, 최소가 미만) |
+| 401 | UNAUTHORIZED | `X-Member-Uuid` 없음 |
+| 403 | FORBIDDEN | 판매자 본인이 아님 |
+| 404 | PRODUCT_POST_NOT_FOUND | UUID 없음 또는 삭제됨 |
 
 ---
 

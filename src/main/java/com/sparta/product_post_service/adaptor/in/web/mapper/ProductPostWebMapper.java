@@ -10,6 +10,7 @@ import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostCardResponse
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostDocumentResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostImageResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostSummaryResponseVo;
+import com.sparta.product_post_service.adaptor.in.web.vo.UpdateProductPostRequestVo;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostCommand;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostDocumentCommand;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostImageCommand;
@@ -19,6 +20,7 @@ import com.sparta.product_post_service.application.port.in.dto.ProductPostCardPa
 import com.sparta.product_post_service.application.port.in.dto.ProductPostDocumentSummaryDto;
 import com.sparta.product_post_service.application.port.in.dto.ProductPostImageSummaryDto;
 import com.sparta.product_post_service.application.port.in.dto.ProductPostSummaryDto;
+import com.sparta.product_post_service.application.port.in.dto.UpdateProductPostCommand;
 
 // ProductPost Web VO ↔ Application DTO 변환 (UUID·시간 생성 금지)
 public final class ProductPostWebMapper {
@@ -38,6 +40,31 @@ public final class ProductPostWebMapper {
 						.toList();
 
 		return CreateProductPostCommand.builder()
+				.categoryUuid(request.getCategoryUuid())
+				.productPostName(request.getProductPostName())
+				.conditionGrade(request.getConditionGrade())
+				.price(request.getPrice())
+				.description(request.getDescription())
+				.latitude(request.getLatitude())
+				.longitude(request.getLongitude())
+				.placeName(request.getPlaceName())
+				.images(images)
+				.documents(documents)
+				.build();
+	}
+
+	// 수정 요청 VO → Command
+	public static UpdateProductPostCommand toUpdateCommand(UpdateProductPostRequestVo request) {
+		List<CreateProductPostImageCommand> images = request.getImages().stream()
+				.map(ProductPostWebMapper::toImageCommand)
+				.toList();
+		List<CreateProductPostDocumentCommand> documents = request.getDocuments() == null
+				? List.of()
+				: request.getDocuments().stream()
+						.map(ProductPostWebMapper::toDocumentCommand)
+						.toList();
+
+		return UpdateProductPostCommand.builder()
 				.categoryUuid(request.getCategoryUuid())
 				.productPostName(request.getProductPostName())
 				.conditionGrade(request.getConditionGrade())

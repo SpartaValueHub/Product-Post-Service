@@ -13,6 +13,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.sparta.product_post_service.application.exception.ForbiddenException;
 import com.sparta.product_post_service.application.exception.UnauthorizedException;
 import com.sparta.product_post_service.domain.exception.ProductPostNotFoundException;
 
@@ -72,6 +73,15 @@ public class GlobalExceptionHandler {
 			HttpServletRequest request
 	) {
 		return buildError(HttpStatus.UNAUTHORIZED, ex.getCode(), ex.getMessage(), request.getRequestURI());
+	}
+
+	// 권한 없음 (타인 글 수정 등)
+	@ExceptionHandler(ForbiddenException.class)
+	public ResponseEntity<Map<String, Object>> handleForbidden(
+			ForbiddenException ex,
+			HttpServletRequest request
+	) {
+		return buildError(HttpStatus.FORBIDDEN, ex.getCode(), ex.getMessage(), request.getRequestURI());
 	}
 
 	// 판매글 없음·숨김·삭제 (일반 사용자 미노출)
