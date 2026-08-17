@@ -107,6 +107,7 @@ public class ProductPostDocument {
 	public void softDelete(Instant deletedAt) {
 		Objects.requireNonNull(deletedAt, "삭제 시각은 필수입니다.");
 		this.deletedAt = deletedAt;
+		this.updatedAt = deletedAt;
 	}
 
 	// 삭제되지 않았는지
