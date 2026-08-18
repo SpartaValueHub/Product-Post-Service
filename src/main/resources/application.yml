@@ -17,6 +17,8 @@ spring:
 product-post:
   policy:
     min-price: ${PRODUCT_POST_MIN_PRICE:500000}
+    bump-daily-limit: ${PRODUCT_POST_BUMP_DAILY_LIMIT:2}
+    bump-cooldown-hours: ${PRODUCT_POST_BUMP_COOLDOWN_HOURS:12}
 
 eureka:
   client:

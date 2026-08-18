@@ -39,6 +39,8 @@ public class ProductPostSummaryResponseVo {
 	private final BigDecimal longitude;
 	// 거래 장소명
 	private final String placeName;
+	// 마지막 끌올 시각
+	private final Instant bumpedAt;
 	// 생성 시각
 	private final Instant createdAt;
 	// 이미지 목록

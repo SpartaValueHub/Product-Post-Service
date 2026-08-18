@@ -23,6 +23,7 @@ import com.sparta.product_post_service.adaptor.in.web.vo.CreateProductPostReques
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostCardPageResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostSummaryResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.UpdateProductPostRequestVo;
+import com.sparta.product_post_service.application.port.in.BumpProductPostUseCase;
 import com.sparta.product_post_service.application.port.in.ChangeProductPostTradeStatusUseCase;
 import com.sparta.product_post_service.application.port.in.ChangeProductPostVisibilityUseCase;
 import com.sparta.product_post_service.application.port.in.CreateProductPostUseCase;
@@ -52,6 +53,8 @@ public class ProductPostController {
 	private final ChangeProductPostVisibilityUseCase changeProductPostVisibilityUseCase;
 	// 판매글 거래 상태 변경 UseCase
 	private final ChangeProductPostTradeStatusUseCase changeProductPostTradeStatusUseCase;
+	// 판매글 끌올 UseCase
+	private final BumpProductPostUseCase bumpProductPostUseCase;
 	// 판매글 상세 조회 UseCase
 	private final GetProductPostUseCase getProductPostUseCase;
 	// 판매글 목록 조회 UseCase
@@ -151,6 +154,16 @@ public class ProductPostController {
 				ProductPostWebMapper.toChangeTradeStatusCommand(request)
 		);
 		return ProductPostWebMapper.toSummaryResponse(updated);
+	}
+
+	// 판매글 끌올 (FO, 판매자 본인·SELLING·PUBLIC)
+	@PostMapping("/{productPostUuid}/bump")
+	public ProductPostSummaryResponseVo bump(
+			@RequestHeader(value = InternalAuthHeaders.MEMBER_UUID, required = false) String memberUuid,
+			@PathVariable String productPostUuid
+	) {
+		ProductPostSummaryDto bumped = bumpProductPostUseCase.bump(memberUuid, productPostUuid);
+		return ProductPostWebMapper.toSummaryResponse(bumped);
 	}
 
 	// 판매글 상세 조회 (FO, 공개글만)

@@ -406,6 +406,63 @@ Reservation 서비스 연동(예약 확정 시 자동 `RESERVED`)은 후속 작�
 
 ---
 
+## POST /api/v1/product-posts/{productPostUuid}/bump
+
+### Summary
+판매글을 끌올한다. (FO, 판매자 본인)
+
+목록에서 상단으로 재노출. `bumpedAt`이 갱신되어 정렬 기준 시각이 변경된다.
+
+### Method · Path
+`POST /api/v1/product-posts/{productPostUuid}/bump`
+
+### Auth
+필요.
+
+| Header | 필수 | 설명 |
+|--------|------|------|
+| `X-Member-Uuid` | Y | 판매자 회원 UUID |
+
+### Request
+
+| 위치 | 필드 | 타입 | 필수 | 제약 |
+|------|------|------|------|------|
+| Path | productPostUuid | string | Y | 판매글 UUID |
+
+Body 없음.
+
+끌올 가능 조건:
+- 판매자 본인
+- `tradeStatus` = `SELLING`
+- `productPostStatus` = `PUBLIC`
+- 동일 상품 쿨다운 경과 (기본 12시간, 환경변수 `PRODUCT_POST_BUMP_COOLDOWN_HOURS`)
+- 일일 끌올 한도 미초과 (기본 2회, 환경변수 `PRODUCT_POST_BUMP_DAILY_LIMIT`)
+
+### Response
+`200 OK`
+
+등록 API 응답과 동일 필드 (`bumpedAt` 반영).
+
+```json
+{
+  "productPostUuid": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+  "bumpedAt": "2026-08-18T08:00:00Z",
+  "tradeStatus": "SELLING",
+  "productPostStatus": "PUBLIC"
+}
+```
+
+### Errors
+
+| status | code | 의미 |
+|--------|------|------|
+| 400 | INVALID_ARGUMENT | 판매중·공개 아님, 쿨다운 미경과, 일일 한도 초과 |
+| 401 | UNAUTHORIZED | `X-Member-Uuid` 없음 |
+| 403 | FORBIDDEN | 판매자 본인이 아님 |
+| 404 | PRODUCT_POST_NOT_FOUND | UUID 없음 또는 삭제됨 |
+
+---
+
 ## GET /api/v1/product-posts/{productPostUuid}
 
 ### Summary

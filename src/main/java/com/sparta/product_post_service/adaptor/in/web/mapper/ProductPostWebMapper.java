@@ -171,6 +171,7 @@ public final class ProductPostWebMapper {
 				.latitude(dto.getLatitude())
 				.longitude(dto.getLongitude())
 				.placeName(dto.getPlaceName())
+				.bumpedAt(dto.getBumpedAt())
 				.createdAt(dto.getCreatedAt())
 				.images(images)
 				.documents(documents)
