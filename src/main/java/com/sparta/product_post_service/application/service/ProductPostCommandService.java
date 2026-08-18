@@ -11,8 +11,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sparta.product_post_service.application.exception.ForbiddenException;
 import com.sparta.product_post_service.application.exception.UnauthorizedException;
+import com.sparta.product_post_service.application.port.in.ChangeProductPostVisibilityUseCase;
 import com.sparta.product_post_service.application.port.in.CreateProductPostUseCase;
+import com.sparta.product_post_service.application.port.in.DeleteProductPostUseCase;
 import com.sparta.product_post_service.application.port.in.UpdateProductPostUseCase;
+import com.sparta.product_post_service.application.port.in.dto.ChangeProductPostVisibilityCommand;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostCommand;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostDocumentCommand;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostImageCommand;
@@ -34,7 +37,8 @@ import lombok.RequiredArgsConstructor;
 // 판매글 쓰기 Application Service
 @Service
 @RequiredArgsConstructor
-public class ProductPostCommandService implements CreateProductPostUseCase, UpdateProductPostUseCase {
+public class ProductPostCommandService implements CreateProductPostUseCase, UpdateProductPostUseCase,
+		DeleteProductPostUseCase, ChangeProductPostVisibilityUseCase {
 
 	// 판매글 저장 Port
 	private final ProductPostSavePort productPostSavePort;
@@ -115,6 +119,70 @@ public class ProductPostCommandService implements CreateProductPostUseCase, Upda
 
 		ProductPost saved = productPostSavePort.update(existing);
 		return toSummary(saved);
+	}
+
+	// 판매글 Soft Delete (본인·미삭제, 거래상태 무관)
+	@Override
+	@Transactional
+	public void delete(String memberUuid, String productPostUuid) {
+		ProductPost existing = loadOwnedMutablePost(memberUuid, productPostUuid, "판매글을 삭제할 권한이 없습니다.");
+		existing.softDelete(Instant.now(clock));
+		productPostSavePort.update(existing);
+	}
+
+	// 판매글 노출 상태 변경 (본인·미삭제, HIDDEN|PUBLIC)
+	@Override
+	@Transactional
+	public ProductPostSummaryDto changeVisibility(
+			String memberUuid,
+			String productPostUuid,
+			ChangeProductPostVisibilityCommand command
+	) {
+		requireVisibilityTarget(command.getProductPostStatus());
+
+		ProductPost existing = loadOwnedMutablePost(
+				memberUuid,
+				productPostUuid,
+				"판매글 노출 상태를 변경할 권한이 없습니다."
+		);
+
+		if (command.getProductPostStatus() == ProductPostStatus.HIDDEN) {
+			existing.hide();
+		} else {
+			existing.publish();
+		}
+
+		ProductPost saved = productPostSavePort.update(existing);
+		return toSummary(saved);
+	}
+
+	// 본인 소유·미삭제 판매글 로드
+	private ProductPost loadOwnedMutablePost(String memberUuid, String productPostUuid, String forbiddenMessage) {
+		requireMemberUuid(memberUuid);
+
+		if (productPostUuid == null || productPostUuid.isBlank()) {
+			throw new ProductPostNotFoundException("판매글을 찾을 수 없습니다.");
+		}
+
+		ProductPost existing = productPostLoadPort.findByUuid(productPostUuid.trim())
+				.filter(this::isUpdatable)
+				.orElseThrow(() -> new ProductPostNotFoundException("판매글을 찾을 수 없습니다."));
+
+		if (!existing.getMemberUuid().equals(memberUuid.trim())) {
+			throw new ForbiddenException(forbiddenMessage);
+		}
+
+		return existing;
+	}
+
+	// visibility PATCH 허용 값 (DELETED는 DELETE API 전용)
+	private void requireVisibilityTarget(ProductPostStatus productPostStatus) {
+		if (productPostStatus == null) {
+			throw new IllegalArgumentException("노출 상태는 필수입니다.");
+		}
+		if (productPostStatus != ProductPostStatus.HIDDEN && productPostStatus != ProductPostStatus.PUBLIC) {
+			throw new IllegalArgumentException("노출 상태는 HIDDEN 또는 PUBLIC만 지정할 수 있습니다.");
+		}
 	}
 
 	// 수정 대상 조회 가능 여부 (삭제·DELETED 제외, HIDDEN 허용)
