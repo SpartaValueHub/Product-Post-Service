@@ -331,6 +331,81 @@ Body 없음.
 
 ---
 
+## PATCH /api/v1/product-posts/{productPostUuid}/trade-status
+
+### Summary
+판매글 거래 상태를 변경한다. (FO, 판매자 본인·판매관리)
+
+내용 수정(`PUT`)과 분리. `SELLING` 상태에서만 내용 수정 가능.
+
+### Method · Path
+`PATCH /api/v1/product-posts/{productPostUuid}/trade-status`
+
+### Auth
+필요.
+
+| Header | 필수 | 설명 |
+|--------|------|------|
+| `X-Member-Uuid` | Y | 판매자 회원 UUID |
+
+### Request
+
+| 위치 | 필드 | 타입 | 필수 | 제약 |
+|------|------|------|------|------|
+| Path | productPostUuid | string | Y | 판매글 UUID |
+| Body | tradeStatus | string | Y | `SELLING` \| `RESERVED` \| `SOLD_OUT` |
+
+예약중:
+
+```json
+{ "tradeStatus": "RESERVED" }
+```
+
+거래완료:
+
+```json
+{ "tradeStatus": "SOLD_OUT" }
+```
+
+예약 취소(판매중 복귀):
+
+```json
+{ "tradeStatus": "SELLING" }
+```
+
+허용 전이:
+
+| 현재 | 변경 가능 |
+|------|-----------|
+| `SELLING` | `RESERVED`, `SOLD_OUT` |
+| `RESERVED` | `SELLING`, `SOLD_OUT` |
+| `SOLD_OUT` | (없음, 되돌리기 불가) |
+
+변경 가능 조건:
+- 판매자 본인
+- `productPostStatus` ≠ `DELETED`, `deletedAt` = null
+- `HIDDEN`·`PUBLIC` 모두 가능
+- 이미 같은 `tradeStatus`여도 `200 OK` (멱등)
+
+Reservation 서비스 연동(예약 확정 시 자동 `RESERVED`)은 후속 작업. 본 API는 FO 판매자 수동 변경용.
+
+### Response
+`200 OK`
+
+등록 API 응답과 동일 필드 (`tradeStatus` 반영).
+
+### Errors
+
+| status | code | 의미 |
+|--------|------|------|
+| 400 | VALIDATION_FAILED | `tradeStatus` 누락 |
+| 400 | INVALID_ARGUMENT | 허용되지 않은 전이 (예: `SOLD_OUT` → `SELLING`) |
+| 401 | UNAUTHORIZED | `X-Member-Uuid` 없음 |
+| 403 | FORBIDDEN | 판매자 본인이 아님 |
+| 404 | PRODUCT_POST_NOT_FOUND | UUID 없음 또는 삭제됨 |
+
+---
+
 ## GET /api/v1/product-posts/{productPostUuid}
 
 ### Summary

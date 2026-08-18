@@ -217,11 +217,31 @@ public class ProductPost {
 		);
 	}
 
-	// 거래 상태 변경
-	public void changeTradeStatus(TradeStatus tradeStatus) {
-		Objects.requireNonNull(tradeStatus, "거래 상태는 필수입니다.");
+	// 거래 상태 전이 (판매자 FO, SOLD_OUT 이후 되돌리기 불가)
+	public void transitionTradeStatus(TradeStatus targetStatus) {
+		Objects.requireNonNull(targetStatus, "거래 상태는 필수입니다.");
 		assertNotDeleted();
-		this.tradeStatus = tradeStatus;
+		if (tradeStatus == targetStatus) {
+			return;
+		}
+		if (!canTransitionTradeStatusTo(targetStatus)) {
+			throw new IllegalArgumentException(
+					"현재 거래 상태(" + tradeStatus + ")에서 " + targetStatus + "(으)로 변경할 수 없습니다."
+			);
+		}
+		this.tradeStatus = targetStatus;
+	}
+
+	// 허용 전이: SELLING↔RESERVED, RESERVED→SOLD_OUT, SELLING→SOLD_OUT
+	private boolean canTransitionTradeStatusTo(TradeStatus targetStatus) {
+		if (tradeStatus == TradeStatus.SOLD_OUT) {
+			return false;
+		}
+		return switch (tradeStatus) {
+			case SELLING -> targetStatus == TradeStatus.RESERVED || targetStatus == TradeStatus.SOLD_OUT;
+			case RESERVED -> targetStatus == TradeStatus.SELLING || targetStatus == TradeStatus.SOLD_OUT;
+			case SOLD_OUT -> false;
+		};
 	}
 
 	// 숨김 처리

@@ -17,11 +17,13 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.sparta.product_post_service.adaptor.in.web.mapper.ProductPostWebMapper;
+import com.sparta.product_post_service.adaptor.in.web.vo.ChangeProductPostTradeStatusRequestVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ChangeProductPostVisibilityRequestVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.CreateProductPostRequestVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostCardPageResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostSummaryResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.UpdateProductPostRequestVo;
+import com.sparta.product_post_service.application.port.in.ChangeProductPostTradeStatusUseCase;
 import com.sparta.product_post_service.application.port.in.ChangeProductPostVisibilityUseCase;
 import com.sparta.product_post_service.application.port.in.CreateProductPostUseCase;
 import com.sparta.product_post_service.application.port.in.DeleteProductPostUseCase;
@@ -48,6 +50,8 @@ public class ProductPostController {
 	private final DeleteProductPostUseCase deleteProductPostUseCase;
 	// 판매글 노출 상태 변경 UseCase
 	private final ChangeProductPostVisibilityUseCase changeProductPostVisibilityUseCase;
+	// 판매글 거래 상태 변경 UseCase
+	private final ChangeProductPostTradeStatusUseCase changeProductPostTradeStatusUseCase;
 	// 판매글 상세 조회 UseCase
 	private final GetProductPostUseCase getProductPostUseCase;
 	// 판매글 목록 조회 UseCase
@@ -130,6 +134,21 @@ public class ProductPostController {
 				memberUuid,
 				productPostUuid,
 				ProductPostWebMapper.toChangeVisibilityCommand(request)
+		);
+		return ProductPostWebMapper.toSummaryResponse(updated);
+	}
+
+	// 판매글 거래 상태 변경 (FO, 판매자 본인·판매관리)
+	@PatchMapping("/{productPostUuid}/trade-status")
+	public ProductPostSummaryResponseVo changeTradeStatus(
+			@RequestHeader(value = InternalAuthHeaders.MEMBER_UUID, required = false) String memberUuid,
+			@PathVariable String productPostUuid,
+			@Valid @RequestBody ChangeProductPostTradeStatusRequestVo request
+	) {
+		ProductPostSummaryDto updated = changeProductPostTradeStatusUseCase.changeTradeStatus(
+				memberUuid,
+				productPostUuid,
+				ProductPostWebMapper.toChangeTradeStatusCommand(request)
 		);
 		return ProductPostWebMapper.toSummaryResponse(updated);
 	}
