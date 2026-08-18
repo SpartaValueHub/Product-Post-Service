@@ -1,6 +1,6 @@
 # ProductPost API (FE 연동 스펙)
 
-Listing-Service 판매글(ProductPost) API 명세서입니다.  
+Product-Post-Service 판매글(ProductPost) API 명세서입니다.  
 식별자는 내부 PK가 아니라 **`productPostUuid`** 를 사용합니다.
 
 ---
@@ -226,6 +226,105 @@ Listing-Service 판매글(ProductPost) API 명세서입니다.
 |--------|------|------|
 | 400 | VALIDATION_FAILED | 요청 필드 검증 실패 |
 | 400 | INVALID_ARGUMENT | Domain 규칙 위반 (예: 판매중이 아님, 최소가 미만) |
+| 401 | UNAUTHORIZED | `X-Member-Uuid` 없음 |
+| 403 | FORBIDDEN | 판매자 본인이 아님 |
+| 404 | PRODUCT_POST_NOT_FOUND | UUID 없음 또는 삭제됨 |
+
+---
+
+## DELETE /api/v1/product-posts/{productPostUuid}
+
+### Summary
+판매글을 Soft Delete 한다. (FO, 판매자 본인)
+
+DB에서 물리 삭제하지 않고 `productPostStatus=DELETED`, `deletedAt` 기록. 목록·상세·신규 채팅에서 제외.
+
+### Method · Path
+`DELETE /api/v1/product-posts/{productPostUuid}`
+
+### Auth
+필요.
+
+| Header | 필수 | 설명 |
+|--------|------|------|
+| `X-Member-Uuid` | Y | 판매자 회원 UUID |
+
+### Request
+
+| 위치 | 필드 | 타입 | 필수 | 제약 |
+|------|------|------|------|------|
+| Path | productPostUuid | string | Y | 판매글 UUID |
+
+Body 없음.
+
+### Response
+`204 No Content` (본문 없음)
+
+### Errors
+
+| status | code | 의미 |
+|--------|------|------|
+| 401 | UNAUTHORIZED | `X-Member-Uuid` 없음 |
+| 403 | FORBIDDEN | 판매자 본인이 아님 |
+| 404 | PRODUCT_POST_NOT_FOUND | UUID 없음 또는 이미 삭제됨 |
+
+삭제 가능 조건:
+- `productPostStatus` ≠ `DELETED`, `deletedAt` = null
+- `tradeStatus` ∈ `SELLING` \| `RESERVED` \| `SOLD_OUT` (거래상태와 무관하게 삭제 가능)
+
+---
+
+## PATCH /api/v1/product-posts/{productPostUuid}/visibility
+
+### Summary
+판매글 노출 상태를 변경한다. (FO, 숨김·재공개)
+
+### Method · Path
+`PATCH /api/v1/product-posts/{productPostUuid}/visibility`
+
+### Auth
+필요.
+
+| Header | 필수 | 설명 |
+|--------|------|------|
+| `X-Member-Uuid` | Y | 판매자 회원 UUID |
+
+### Request
+
+| 위치 | 필드 | 타입 | 필수 | 제약 |
+|------|------|------|------|------|
+| Path | productPostUuid | string | Y | 판매글 UUID |
+| Body | productPostStatus | string | Y | `HIDDEN` \| `PUBLIC` (`DELETED` 불가) |
+
+```json
+{ "productPostStatus": "HIDDEN" }
+```
+
+재공개:
+
+```json
+{ "productPostStatus": "PUBLIC" }
+```
+
+변경 가능 조건:
+- 판매자 본인
+- `productPostStatus` ≠ `DELETED`, `deletedAt` = null
+- `tradeStatus` 무관 (예약·거래완료 글도 숨김·재공개 가능)
+- 이미 같은 상태여도 `200 OK` (멱등)
+
+`HIDDEN` 시 목록·상세에서 404와 동일하게 미노출. 판매자는 수정 API로 내용 변경 가능.
+
+### Response
+`200 OK`
+
+등록 API 응답과 동일 필드 (`productPostStatus` 반영).
+
+### Errors
+
+| status | code | 의미 |
+|--------|------|------|
+| 400 | VALIDATION_FAILED | `productPostStatus` 누락 |
+| 400 | INVALID_ARGUMENT | `DELETED` 등 허용되지 않은 값 |
 | 401 | UNAUTHORIZED | `X-Member-Uuid` 없음 |
 | 403 | FORBIDDEN | 판매자 본인이 아님 |
 | 404 | PRODUCT_POST_NOT_FOUND | UUID 없음 또는 삭제됨 |
