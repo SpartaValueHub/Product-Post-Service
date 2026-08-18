@@ -11,10 +11,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sparta.product_post_service.application.exception.ForbiddenException;
 import com.sparta.product_post_service.application.exception.UnauthorizedException;
+import com.sparta.product_post_service.application.port.in.ChangeProductPostTradeStatusUseCase;
 import com.sparta.product_post_service.application.port.in.ChangeProductPostVisibilityUseCase;
 import com.sparta.product_post_service.application.port.in.CreateProductPostUseCase;
 import com.sparta.product_post_service.application.port.in.DeleteProductPostUseCase;
 import com.sparta.product_post_service.application.port.in.UpdateProductPostUseCase;
+import com.sparta.product_post_service.application.port.in.dto.ChangeProductPostTradeStatusCommand;
 import com.sparta.product_post_service.application.port.in.dto.ChangeProductPostVisibilityCommand;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostCommand;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostDocumentCommand;
@@ -31,6 +33,7 @@ import com.sparta.product_post_service.domain.model.ProductPost;
 import com.sparta.product_post_service.domain.model.ProductPostDocument;
 import com.sparta.product_post_service.domain.model.ProductPostImage;
 import com.sparta.product_post_service.domain.model.ProductPostStatus;
+import com.sparta.product_post_service.domain.model.TradeStatus;
 
 import lombok.RequiredArgsConstructor;
 
@@ -38,7 +41,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class ProductPostCommandService implements CreateProductPostUseCase, UpdateProductPostUseCase,
-		DeleteProductPostUseCase, ChangeProductPostVisibilityUseCase {
+		DeleteProductPostUseCase, ChangeProductPostVisibilityUseCase, ChangeProductPostTradeStatusUseCase {
 
 	// 판매글 저장 Port
 	private final ProductPostSavePort productPostSavePort;
@@ -154,6 +157,35 @@ public class ProductPostCommandService implements CreateProductPostUseCase, Upda
 
 		ProductPost saved = productPostSavePort.update(existing);
 		return toSummary(saved);
+	}
+
+	// 판매글 거래 상태 변경 (본인·미삭제, Domain 전이 규칙)
+	@Override
+	@Transactional
+	public ProductPostSummaryDto changeTradeStatus(
+			String memberUuid,
+			String productPostUuid,
+			ChangeProductPostTradeStatusCommand command
+	) {
+		requireTradeStatusTarget(command.getTradeStatus());
+
+		ProductPost existing = loadOwnedMutablePost(
+				memberUuid,
+				productPostUuid,
+				"판매글 거래 상태를 변경할 권한이 없습니다."
+		);
+
+		existing.transitionTradeStatus(command.getTradeStatus());
+
+		ProductPost saved = productPostSavePort.update(existing);
+		return toSummary(saved);
+	}
+
+	// trade-status PATCH 허용 값
+	private void requireTradeStatusTarget(TradeStatus tradeStatus) {
+		if (tradeStatus == null) {
+			throw new IllegalArgumentException("거래 상태는 필수입니다.");
+		}
 	}
 
 	// 본인 소유·미삭제 판매글 로드

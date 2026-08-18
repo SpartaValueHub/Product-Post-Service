@@ -2,6 +2,7 @@ package com.sparta.product_post_service.adaptor.in.web.mapper;
 
 import java.util.List;
 
+import com.sparta.product_post_service.adaptor.in.web.vo.ChangeProductPostTradeStatusRequestVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ChangeProductPostVisibilityRequestVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.CreateProductPostDocumentRequestVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.CreateProductPostImageRequestVo;
@@ -12,6 +13,7 @@ import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostDocumentResp
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostImageResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostSummaryResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.UpdateProductPostRequestVo;
+import com.sparta.product_post_service.application.port.in.dto.ChangeProductPostTradeStatusCommand;
 import com.sparta.product_post_service.application.port.in.dto.ChangeProductPostVisibilityCommand;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostCommand;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostDocumentCommand;
@@ -52,6 +54,15 @@ public final class ProductPostWebMapper {
 				.placeName(request.getPlaceName())
 				.images(images)
 				.documents(documents)
+				.build();
+	}
+
+	// 거래 상태 변경 요청 VO → Command
+	public static ChangeProductPostTradeStatusCommand toChangeTradeStatusCommand(
+			ChangeProductPostTradeStatusRequestVo request
+	) {
+		return ChangeProductPostTradeStatusCommand.builder()
+				.tradeStatus(request.getTradeStatus())
 				.build();
 	}
 
