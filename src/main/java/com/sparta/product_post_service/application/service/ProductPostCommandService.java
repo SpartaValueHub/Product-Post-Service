@@ -1,7 +1,10 @@
 package com.sparta.product_post_service.application.service;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -11,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.sparta.product_post_service.application.exception.ForbiddenException;
 import com.sparta.product_post_service.application.exception.UnauthorizedException;
+import com.sparta.product_post_service.application.port.in.BumpProductPostUseCase;
 import com.sparta.product_post_service.application.port.in.ChangeProductPostTradeStatusUseCase;
 import com.sparta.product_post_service.application.port.in.ChangeProductPostVisibilityUseCase;
 import com.sparta.product_post_service.application.port.in.CreateProductPostUseCase;
@@ -25,10 +29,13 @@ import com.sparta.product_post_service.application.port.in.dto.ProductPostDocume
 import com.sparta.product_post_service.application.port.in.dto.ProductPostImageSummaryDto;
 import com.sparta.product_post_service.application.port.in.dto.ProductPostSummaryDto;
 import com.sparta.product_post_service.application.port.in.dto.UpdateProductPostCommand;
+import com.sparta.product_post_service.application.port.out.BumpQuotaLoadPort;
+import com.sparta.product_post_service.application.port.out.BumpQuotaSavePort;
 import com.sparta.product_post_service.application.port.out.ProductPostLoadPort;
 import com.sparta.product_post_service.application.port.out.ProductPostSavePort;
 import com.sparta.product_post_service.config.ProductPostPolicyProperties;
 import com.sparta.product_post_service.domain.exception.ProductPostNotFoundException;
+import com.sparta.product_post_service.domain.model.BumpQuota;
 import com.sparta.product_post_service.domain.model.ProductPost;
 import com.sparta.product_post_service.domain.model.ProductPostDocument;
 import com.sparta.product_post_service.domain.model.ProductPostImage;
@@ -41,16 +48,24 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 public class ProductPostCommandService implements CreateProductPostUseCase, UpdateProductPostUseCase,
-		DeleteProductPostUseCase, ChangeProductPostVisibilityUseCase, ChangeProductPostTradeStatusUseCase {
+		DeleteProductPostUseCase, ChangeProductPostVisibilityUseCase, ChangeProductPostTradeStatusUseCase,
+		BumpProductPostUseCase {
 
 	// 판매글 저장 Port
 	private final ProductPostSavePort productPostSavePort;
 	// 판매글 조회 Port (수정 시 기존 데이터 로드)
 	private final ProductPostLoadPort productPostLoadPort;
+	// 끌올 일일 횟수 조회 Port
+	private final BumpQuotaLoadPort bumpQuotaLoadPort;
+	// 끌올 일일 횟수 저장 Port
+	private final BumpQuotaSavePort bumpQuotaSavePort;
 	// 생성 시각용 시계 (테스트 교체 가능)
 	private final Clock clock;
-	// 판매글 정책 (최소가 등)
+	// 판매글 정책 (최소가, 끌올 한도·쿨다운 등)
 	private final ProductPostPolicyProperties productPostPolicyProperties;
+
+	// 일일 한도 기준 시간대 (KST)
+	private static final ZoneId QUOTA_ZONE = ZoneId.of("Asia/Seoul");
 
 	// 판매글 등록
 	@Override
@@ -181,6 +196,66 @@ public class ProductPostCommandService implements CreateProductPostUseCase, Upda
 		return toSummary(saved);
 	}
 
+	// 판매글 끌올 (본인·SELLING·PUBLIC, 쿨다운·일일 한도 적용)
+	@Override
+	@Transactional
+	public ProductPostSummaryDto bump(String memberUuid, String productPostUuid) {
+		ProductPost existing = loadOwnedMutablePost(
+				memberUuid,
+				productPostUuid,
+				"판매글을 끌올할 권한이 없습니다."
+		);
+
+		requireBumpableStatus(existing);
+
+		Instant now = Instant.now(clock);
+		requireCooldownElapsed(existing, now);
+
+		LocalDate today = now.atZone(QUOTA_ZONE).toLocalDate();
+		BumpQuota quota = bumpQuotaLoadPort
+				.findByMemberUuidAndQuotaDate(memberUuid.trim(), today)
+				.orElseGet(() -> BumpQuota.create(memberUuid.trim(), today, now));
+
+		quota.increaseUsage(productPostPolicyProperties.bumpDailyLimit(), now);
+
+		existing.markBumped(now);
+
+		productPostSavePort.update(existing);
+
+		if (quota.getBumpQuotaId() == null) {
+			bumpQuotaSavePort.save(quota);
+		} else {
+			bumpQuotaSavePort.update(quota);
+		}
+
+		return toSummary(existing);
+	}
+
+	// 끌올 가능 상태 확인 (SELLING + PUBLIC)
+	private void requireBumpableStatus(ProductPost post) {
+		if (post.getTradeStatus() != TradeStatus.SELLING) {
+			throw new IllegalArgumentException("판매중 상태에서만 끌올할 수 있습니다.");
+		}
+		if (post.getProductPostStatus() != ProductPostStatus.PUBLIC) {
+			throw new IllegalArgumentException("공개 상태에서만 끌올할 수 있습니다.");
+		}
+	}
+
+	// 동일 상품 쿨다운 확인
+	private void requireCooldownElapsed(ProductPost post, Instant now) {
+		if (post.getBumpedAt() == null) {
+			return;
+		}
+		Duration elapsed = Duration.between(post.getBumpedAt(), now);
+		long cooldownHours = productPostPolicyProperties.bumpCooldownHours();
+		if (elapsed.toHours() < cooldownHours) {
+			long remainMinutes = Duration.ofHours(cooldownHours).minus(elapsed).toMinutes();
+			throw new IllegalArgumentException(
+					"끌올 쿨다운 중입니다. " + remainMinutes + "분 후 다시 시도해주세요."
+			);
+		}
+	}
+
 	// trade-status PATCH 허용 값
 	private void requireTradeStatusTarget(TradeStatus tradeStatus) {
 		if (tradeStatus == null) {
@@ -293,6 +368,7 @@ public class ProductPostCommandService implements CreateProductPostUseCase, Upda
 				.latitude(listing.getLatitude())
 				.longitude(listing.getLongitude())
 				.placeName(listing.getPlaceName())
+				.bumpedAt(listing.getBumpedAt())
 				.createdAt(listing.getCreatedAt())
 				.images(images)
 				.documents(documents)
