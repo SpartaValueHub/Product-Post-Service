@@ -72,6 +72,7 @@ public class ProductPostLoadAdapter implements ProductPostLoadPort {
 		boolean hasCategories = criteria.getCategoryUuids() != null && !criteria.getCategoryUuids().isEmpty();
 		boolean hasGrades = criteria.getConditionGrades() != null && !criteria.getConditionGrades().isEmpty();
 		boolean hasDocumentTypes = criteria.getDocumentTypes() != null && !criteria.getDocumentTypes().isEmpty();
+		String memberUuid = blankToNull(criteria.getMemberUuid());
 		String keyword = blankToNull(criteria.getKeyword());
 
 		Page<ProductPostEntity> page = productPostJpaRepository.searchForList(
@@ -79,6 +80,7 @@ public class ProductPostLoadAdapter implements ProductPostLoadPort {
 				LIST_TRADE_STATUSES,
 				hasCategories,
 				hasCategories ? criteria.getCategoryUuids() : UNUSED_STRINGS,
+				memberUuid,
 				keyword,
 				criteria.getMinPrice(),
 				criteria.getMaxPrice(),

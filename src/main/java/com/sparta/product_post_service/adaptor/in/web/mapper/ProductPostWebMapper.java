@@ -103,6 +103,7 @@ public final class ProductPostWebMapper {
 	// 목록 쿼리 파라미터 → Application Query
 	public static ListProductPostsQuery toListQuery(
 			List<String> categoryUuids,
+			String memberUuid,
 			String keyword,
 			Long minPrice,
 			Long maxPrice,
@@ -113,6 +114,7 @@ public final class ProductPostWebMapper {
 	) {
 		return ListProductPostsQuery.builder()
 				.categoryUuids(categoryUuids)
+				.memberUuid(memberUuid)
 				.keyword(keyword)
 				.minPrice(minPrice)
 				.maxPrice(maxPrice)

@@ -541,6 +541,7 @@ Body 없음.
 | 필드 | 타입 | 필수 | 제약 |
 |------|------|------|------|
 | categoryUuids | string[] | N | 리프 카테고리 UUID. 없으면 전체(All). Luxury「전체상품」은 FE가 하위 리프 UUID를 모두 전달 |
+| memberUuid | string | N | 판매자(회원) UUID. 해당 회원의 PUBLIC 글만. 프로필 모달 「판매중인 물품」용. blank면 미적용 |
 | keyword | string | N | 상품명 부분 일치. 빈 값이면 미적용 |
 | minPrice | number | N | 0 이상. maxPrice보다 클 수 없음 |
 | maxPrice | number | N | 0 이상 |
@@ -550,10 +551,12 @@ Body 없음.
 | size | number | N | 기본 `20`, 최대 `50` |
 
 정렬: `COALESCE(bumpedAt, createdAt) DESC` (끌올 반영 최신순)  
-노출: `productPostStatus=PUBLIC` 이고 `tradeStatus` ∈ `SELLING` \| `RESERVED` \| `SOLD_OUT` (HIDDEN·DELETED 제외)
+노출: `productPostStatus=PUBLIC` 이고 `tradeStatus` ∈ `SELLING` \| `RESERVED` \| `SOLD_OUT` (HIDDEN·DELETED 제외)  
+`tradeStatus` 쿼리 필터는 없음. 프로필에서 「판매중」만 필요하면 FE가 `SELLING`/`RESERVED`를 걸러도 됨.
 
 ```http
 GET /api/v1/product-posts?categoryUuids=uuid1&documentTypes=RECEIPT&documentTypes=WARRANTY&page=1&size=20
+GET /api/v1/product-posts?memberUuid=550e8400-e29b-41d4-a716-446655440000&page=1&size=4
 ```
 
 ### Response

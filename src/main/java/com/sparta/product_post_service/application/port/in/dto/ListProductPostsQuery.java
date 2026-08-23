@@ -12,6 +12,8 @@ public class ListProductPostsQuery {
 
 	// 리프 카테고리 UUID 목록 (All/전체상품이면 비움 — FE가 하위 리프를 채움)
 	private final List<String> categoryUuids;
+	// 판매자(회원) UUID — 해당 회원의 글만 (프로필 모달용, null/blank면 미적용)
+	private final String memberUuid;
 	// 상품명 검색어
 	private final String keyword;
 	// 최소 가격
