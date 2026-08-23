@@ -28,6 +28,7 @@ public interface ProductPostJpaRepository extends JpaRepository<ProductPostEntit
 			  AND p.deletedAt IS NULL
 			  AND p.tradeStatus IN :tradeStatuses
 			  AND (:hasCategories = false OR p.categoryUuid IN :categoryUuids)
+			  AND (:memberUuid IS NULL OR p.memberUuid = :memberUuid)
 			  AND (:keyword IS NULL OR p.productPostName LIKE CONCAT('%', :keyword, '%'))
 			  AND (:minPrice IS NULL OR p.price >= :minPrice)
 			  AND (:maxPrice IS NULL OR p.price <= :maxPrice)
@@ -45,6 +46,7 @@ public interface ProductPostJpaRepository extends JpaRepository<ProductPostEntit
 			@Param("tradeStatuses") Collection<TradeStatus> tradeStatuses,
 			@Param("hasCategories") boolean hasCategories,
 			@Param("categoryUuids") Collection<String> categoryUuids,
+			@Param("memberUuid") String memberUuid,
 			@Param("keyword") String keyword,
 			@Param("minPrice") Long minPrice,
 			@Param("maxPrice") Long maxPrice,

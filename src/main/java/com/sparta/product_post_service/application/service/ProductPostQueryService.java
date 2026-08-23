@@ -65,11 +65,13 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 		List<String> conditionGrades = normalizeConditionGrades(query.getConditionGrades());
 		List<DocumentType> documentTypes = normalizeDocumentTypes(query.getDocumentTypes());
 		List<String> categoryUuids = normalizeUuids(query.getCategoryUuids());
-		String keyword = query.getKeyword() == null ? null : query.getKeyword().trim();
+		String memberUuid = blankToNull(query.getMemberUuid());
+		String keyword = blankToNull(query.getKeyword());
 
 		ProductPostCardPageProjection projection = productPostLoadPort.findCards(
 				ProductPostListCriteria.builder()
 						.categoryUuids(categoryUuids)
+						.memberUuid(memberUuid)
 						.keyword(keyword)
 						.minPrice(minPrice)
 						.maxPrice(maxPrice)
@@ -225,5 +227,13 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 				.map(String::trim)
 				.distinct()
 				.toList();
+	}
+
+	// blank 문자열은 필터 미적용
+	private String blankToNull(String value) {
+		if (value == null || value.isBlank()) {
+			return null;
+		}
+		return value.trim();
 	}
 }

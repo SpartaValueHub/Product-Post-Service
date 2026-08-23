@@ -14,6 +14,8 @@ public class ProductPostListCriteria {
 
 	// 리프 카테고리 UUID 목록 (비어 있으면 전체)
 	private final List<String> categoryUuids;
+	// 판매자(회원) UUID (null이면 미적용)
+	private final String memberUuid;
 	// 상품명 검색어 (null/blank면 미적용)
 	private final String keyword;
 	// 최소 가격 (null이면 미적용)

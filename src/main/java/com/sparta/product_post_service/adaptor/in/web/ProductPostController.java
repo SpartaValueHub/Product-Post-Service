@@ -64,6 +64,7 @@ public class ProductPostController {
 	@GetMapping
 	public ProductPostCardPageResponseVo list(
 			@RequestParam(required = false) List<String> categoryUuids,
+			@RequestParam(required = false) String memberUuid,
 			@RequestParam(required = false) String keyword,
 			@RequestParam(required = false) Long minPrice,
 			@RequestParam(required = false) Long maxPrice,
@@ -75,6 +76,7 @@ public class ProductPostController {
 		ProductPostCardPageDto result = listProductPostsUseCase.list(
 				ProductPostWebMapper.toListQuery(
 						categoryUuids,
+						memberUuid,
 						keyword,
 						minPrice,
 						maxPrice,
