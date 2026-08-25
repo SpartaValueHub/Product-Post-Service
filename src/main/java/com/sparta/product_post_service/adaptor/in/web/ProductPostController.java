@@ -60,11 +60,12 @@ public class ProductPostController {
 	// 판매글 목록 조회 UseCase
 	private final ListProductPostsUseCase listProductPostsUseCase;
 
-	// 판매글 목록 조회 (FO 홈·헤더, Auth 불필요)
+	// 판매글 목록 조회 (FO 홈·마이페이지·프로필, Auth 불필요)
 	@GetMapping
 	public ProductPostCardPageResponseVo list(
 			@RequestParam(required = false) List<String> categoryUuids,
 			@RequestParam(required = false) String memberUuid,
+			@RequestParam(required = false) String tradeStatus,
 			@RequestParam(required = false) String keyword,
 			@RequestParam(required = false) Long minPrice,
 			@RequestParam(required = false) Long maxPrice,
@@ -77,6 +78,7 @@ public class ProductPostController {
 				ProductPostWebMapper.toListQuery(
 						categoryUuids,
 						memberUuid,
+						tradeStatus,
 						keyword,
 						minPrice,
 						maxPrice,

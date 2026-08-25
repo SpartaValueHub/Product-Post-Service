@@ -3,6 +3,8 @@ package com.sparta.product_post_service.application.port.out.dto;
 import java.util.List;
 
 import com.sparta.product_post_service.domain.model.DocumentType;
+import com.sparta.product_post_service.domain.model.ProductPostStatus;
+import com.sparta.product_post_service.domain.model.TradeStatus;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -12,10 +14,14 @@ import lombok.Getter;
 @Builder
 public class ProductPostListCriteria {
 
+	// 게시 상태 (Application이 목록 정책에 맞게 지정)
+	private final ProductPostStatus productPostStatus;
 	// 리프 카테고리 UUID 목록 (비어 있으면 전체)
 	private final List<String> categoryUuids;
 	// 판매자(회원) UUID (null이면 미적용)
 	private final String memberUuid;
+	// 거래 상태 IN 조건 (Application에서 미필터 시 노출 가능 상태 전체로 채움)
+	private final List<TradeStatus> tradeStatuses;
 	// 상품명 검색어 (null/blank면 미적용)
 	private final String keyword;
 	// 최소 가격 (null이면 미적용)

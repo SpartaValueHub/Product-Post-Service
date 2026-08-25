@@ -1,8 +1,10 @@
 package com.sparta.product_post_service.application.service;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,7 @@ import com.sparta.product_post_service.domain.exception.ProductPostNotFoundExcep
 import com.sparta.product_post_service.domain.model.DocumentType;
 import com.sparta.product_post_service.domain.model.ProductPost;
 import com.sparta.product_post_service.domain.model.ProductPostStatus;
+import com.sparta.product_post_service.domain.model.TradeStatus;
 
 import lombok.RequiredArgsConstructor;
 
@@ -54,7 +57,7 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 		return toSummary(productPost);
 	}
 
-	// FO 목록 조회 (PUBLIC + SELLING|RESERVED|SOLD_OUT, 끌올 반영 최신순)
+	// FO 목록 조회 (PUBLIC + 거래상태 필터, 끌올 반영 최신순)
 	@Override
 	public ProductPostCardPageDto list(ListProductPostsQuery query) {
 		int page = normalizePage(query.getPage());
@@ -65,13 +68,16 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 		List<String> conditionGrades = normalizeConditionGrades(query.getConditionGrades());
 		List<DocumentType> documentTypes = normalizeDocumentTypes(query.getDocumentTypes());
 		List<String> categoryUuids = normalizeUuids(query.getCategoryUuids());
+		List<TradeStatus> tradeStatuses = normalizeTradeStatuses(query.getTradeStatus());
 		String memberUuid = blankToNull(query.getMemberUuid());
 		String keyword = blankToNull(query.getKeyword());
 
 		ProductPostCardPageProjection projection = productPostLoadPort.findCards(
 				ProductPostListCriteria.builder()
+						.productPostStatus(ProductPostStatus.PUBLIC)
 						.categoryUuids(categoryUuids)
 						.memberUuid(memberUuid)
+						.tradeStatuses(tradeStatuses)
 						.keyword(keyword)
 						.minPrice(minPrice)
 						.maxPrice(maxPrice)
@@ -215,6 +221,44 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 				})
 				.distinct()
 				.toList();
+	}
+
+	// 거래 상태 정규화·검증 (미전달 시 목록 노출 가능 상태 전체)
+	private List<TradeStatus> normalizeTradeStatuses(String tradeStatus) {
+		if (tradeStatus == null || tradeStatus.isBlank()) {
+			return listVisibleTradeStatuses();
+		}
+		return List.of(parseListVisibleTradeStatus(tradeStatus));
+	}
+
+	// Domain 플래그 기준으로 목록 노출 상태 수집
+	private List<TradeStatus> listVisibleTradeStatuses() {
+		return Arrays.stream(TradeStatus.values())
+				.filter(TradeStatus::isListVisible)
+				.toList();
+	}
+
+	// 목록 필터로 허용되는 거래 상태만 파싱
+	private TradeStatus parseListVisibleTradeStatus(String tradeStatus) {
+		String normalized = tradeStatus.trim().toUpperCase(Locale.ROOT);
+		TradeStatus parsed;
+		try {
+			parsed = TradeStatus.valueOf(normalized);
+		} catch (IllegalArgumentException ex) {
+			throw invalidTradeStatusArgument();
+		}
+		if (!parsed.isListVisible()) {
+			throw invalidTradeStatusArgument();
+		}
+		return parsed;
+	}
+
+	// 허용 값은 Domain 노출 플래그에서 조합
+	private IllegalArgumentException invalidTradeStatusArgument() {
+		String allowed = listVisibleTradeStatuses().stream()
+				.map(Enum::name)
+				.collect(Collectors.joining(", "));
+		return new IllegalArgumentException("tradeStatus는 " + allowed + " 중 하나여야 합니다.");
 	}
 
 	// UUID 목록 정규화

@@ -1,0 +1,122 @@
+package com.sparta.product_post_service.application.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import com.sparta.product_post_service.application.port.in.dto.ListProductPostsQuery;
+import com.sparta.product_post_service.application.port.in.dto.ProductPostCardPageDto;
+import com.sparta.product_post_service.application.port.out.ProductPostLoadPort;
+import com.sparta.product_post_service.application.port.out.dto.ProductPostCardPageProjection;
+import com.sparta.product_post_service.application.port.out.dto.ProductPostCardProjection;
+import com.sparta.product_post_service.application.port.out.dto.ProductPostListCriteria;
+import com.sparta.product_post_service.domain.model.ProductPostStatus;
+import com.sparta.product_post_service.domain.model.TradeStatus;
+
+@ExtendWith(MockitoExtension.class)
+class ProductPostQueryServiceListTest {
+
+	@Mock
+	private ProductPostLoadPort productPostLoadPort;
+
+	@InjectMocks
+	private ProductPostQueryService productPostQueryService;
+
+	@Test
+	void list_withoutTradeStatus_passesAllVisibleStatuses() {
+		stubEmptyPage();
+
+		productPostQueryService.list(baseQuery(null).build());
+
+		ProductPostListCriteria criteria = captureCriteria();
+		assertThat(criteria.getProductPostStatus()).isEqualTo(ProductPostStatus.PUBLIC);
+		assertThat(criteria.getTradeStatuses())
+				.containsExactlyElementsOf(
+						Arrays.stream(TradeStatus.values())
+								.filter(TradeStatus::isListVisible)
+								.toList()
+				);
+	}
+
+	@Test
+	void list_withSelling_passesSingleStatus() {
+		stubEmptyPage();
+
+		productPostQueryService.list(baseQuery("SELLING").memberUuid("member-1").build());
+
+		ProductPostListCriteria criteria = captureCriteria();
+		assertThat(criteria.getMemberUuid()).isEqualTo("member-1");
+		assertThat(criteria.getTradeStatuses()).containsExactly(TradeStatus.SELLING);
+	}
+
+	@Test
+	void list_withInvalidTradeStatus_throwsIllegalArgument() {
+		assertThatThrownBy(() -> productPostQueryService.list(baseQuery("HIDDEN").build()))
+				.isInstanceOf(IllegalArgumentException.class)
+				.hasMessageContaining("tradeStatus");
+	}
+
+	@Test
+	void list_totalPages_reflectsFilteredTotalElements() {
+		when(productPostLoadPort.findCards(any())).thenReturn(
+				ProductPostCardPageProjection.builder()
+						.content(List.of(
+								ProductPostCardProjection.builder()
+										.productPostUuid("pp-1")
+										.productPostName("가방")
+										.price(1_000_000L)
+										.tradeStatus(TradeStatus.SELLING)
+										.listedAt(Instant.parse("2026-08-25T00:00:00Z"))
+										.thumbnailUrl(null)
+										.build()
+						))
+						.totalElements(41L)
+						.page(0)
+						.size(20)
+						.build()
+		);
+
+		ProductPostCardPageDto result = productPostQueryService.list(baseQuery("SELLING").page(1).size(20).build());
+
+		assertThat(result.getTotalElements()).isEqualTo(41L);
+		assertThat(result.getTotalPages()).isEqualTo(3);
+		assertThat(result.getPage()).isEqualTo(1);
+	}
+
+	private ListProductPostsQuery.ListProductPostsQueryBuilder baseQuery(String tradeStatus) {
+		return ListProductPostsQuery.builder()
+				.tradeStatus(tradeStatus)
+				.page(1)
+				.size(20);
+	}
+
+	private void stubEmptyPage() {
+		when(productPostLoadPort.findCards(any())).thenReturn(
+				ProductPostCardPageProjection.builder()
+						.content(List.of())
+						.totalElements(0L)
+						.page(0)
+						.size(20)
+						.build()
+		);
+	}
+
+	private ProductPostListCriteria captureCriteria() {
+		ArgumentCaptor<ProductPostListCriteria> captor = ArgumentCaptor.forClass(ProductPostListCriteria.class);
+		verify(productPostLoadPort).findCards(captor.capture());
+		return captor.getValue();
+	}
+}
