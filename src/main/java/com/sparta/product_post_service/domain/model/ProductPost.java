@@ -20,6 +20,8 @@ public class ProductPost {
 	private static final int DESCRIPTION_MAX_LENGTH = 2000;
 	// 장소명 최대 길이
 	private static final int PLACE_NAME_MAX_LENGTH = 100;
+	// 거래 희망 구·동 최대 길이
+	private static final int REGION_LABEL_MAX_LENGTH = 50;
 	// 상품 사진 최소·최대 개수
 	private static final int IMAGE_MIN_COUNT = 1;
 	private static final int IMAGE_MAX_COUNT = 10;
@@ -52,6 +54,10 @@ public class ProductPost {
 	private BigDecimal longitude;
 	// 거래 장소명
 	private String placeName;
+	// 거래 희망 동(읍면동, 없으면 null)
+	private String regionDong;
+	// 거래 희망 구(시군구, 없으면 null)
+	private String regionGu;
 	// 마지막 끌올 시각
 	private Instant bumpedAt;
 	// 생성일시
@@ -79,6 +85,8 @@ public class ProductPost {
 			BigDecimal latitude,
 			BigDecimal longitude,
 			String placeName,
+			String regionDong,
+			String regionGu,
 			Instant bumpedAt,
 			Instant createdAt,
 			Instant updatedAt,
@@ -99,6 +107,8 @@ public class ProductPost {
 		this.latitude = latitude;
 		this.longitude = longitude;
 		this.placeName = placeName;
+		this.regionDong = regionDong;
+		this.regionGu = regionGu;
 		this.bumpedAt = bumpedAt;
 		this.createdAt = createdAt;
 		this.updatedAt = updatedAt;
@@ -123,6 +133,8 @@ public class ProductPost {
 			BigDecimal latitude,
 			BigDecimal longitude,
 			String placeName,
+			String regionDong,
+			String regionGu,
 			List<ProductPostImage> images,
 			List<ProductPostDocument> documents,
 			long minPrice,
@@ -136,6 +148,8 @@ public class ProductPost {
 		validatePrice(price, minPrice);
 		validateDescription(description);
 		validatePlace(placeName, latitude, longitude);
+		String normalizedRegionDong = normalizeRegionLabel(regionDong, "거래 희망 동");
+		String normalizedRegionGu = normalizeRegionLabel(regionGu, "거래 희망 구");
 		validateImages(images);
 		Objects.requireNonNull(createdAt, "생성 시각은 필수입니다.");
 
@@ -155,6 +169,8 @@ public class ProductPost {
 				latitude,
 				longitude,
 				placeName.trim(),
+				normalizedRegionDong,
+				normalizedRegionGu,
 				null,
 				createdAt,
 				null,
@@ -179,6 +195,8 @@ public class ProductPost {
 			BigDecimal latitude,
 			BigDecimal longitude,
 			String placeName,
+			String regionDong,
+			String regionGu,
 			Instant bumpedAt,
 			Instant createdAt,
 			Instant updatedAt,
@@ -208,6 +226,8 @@ public class ProductPost {
 				latitude,
 				longitude,
 				placeName,
+				regionDong,
+				regionGu,
 				bumpedAt,
 				createdAt,
 				updatedAt,
@@ -280,6 +300,8 @@ public class ProductPost {
 			BigDecimal latitude,
 			BigDecimal longitude,
 			String placeName,
+			String regionDong,
+			String regionGu,
 			List<ProductPostImage> replacementImages,
 			List<ProductPostDocument> replacementDocuments,
 			long minPrice,
@@ -293,6 +315,8 @@ public class ProductPost {
 		validatePrice(price, minPrice);
 		validateDescription(description);
 		validatePlace(placeName, latitude, longitude);
+		String normalizedRegionDong = normalizeRegionLabel(regionDong, "거래 희망 동");
+		String normalizedRegionGu = normalizeRegionLabel(regionGu, "거래 희망 구");
 		Objects.requireNonNull(updatedAt, "수정 시각은 필수입니다.");
 
 		this.categoryUuid = categoryUuid.trim();
@@ -303,6 +327,8 @@ public class ProductPost {
 		this.latitude = latitude;
 		this.longitude = longitude;
 		this.placeName = placeName.trim();
+		this.regionDong = normalizedRegionDong;
+		this.regionGu = normalizedRegionGu;
 		replaceImages(replacementImages, updatedAt);
 		replaceDocuments(replacementDocuments, updatedAt);
 		this.updatedAt = updatedAt;
@@ -405,6 +431,18 @@ public class ProductPost {
 		}
 		Objects.requireNonNull(latitude, "위도는 필수입니다.");
 		Objects.requireNonNull(longitude, "경도는 필수입니다.");
+	}
+
+	// blank는 null. FE 표시 우선순위: 동 > 구 > 장소명
+	private static String normalizeRegionLabel(String value, String fieldLabel) {
+		if (value == null || value.isBlank()) {
+			return null;
+		}
+		String trimmed = value.trim();
+		if (trimmed.length() > REGION_LABEL_MAX_LENGTH) {
+			throw new IllegalArgumentException(fieldLabel + "는 최대 " + REGION_LABEL_MAX_LENGTH + "자까지 가능합니다.");
+		}
+		return trimmed;
 	}
 
 	private static void validateImages(List<ProductPostImage> images) {

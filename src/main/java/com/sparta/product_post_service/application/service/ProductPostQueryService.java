@@ -96,6 +96,9 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 						.tradeStatus(card.getTradeStatus())
 						.listedAt(card.getListedAt())
 						.thumbnailUrl(card.getThumbnailUrl())
+						.regionDong(card.getRegionDong())
+						.regionGu(card.getRegionGu())
+						.placeName(card.getPlaceName())
 						.build())
 				.toList();
 

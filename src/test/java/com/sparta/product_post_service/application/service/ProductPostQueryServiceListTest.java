@@ -70,6 +70,37 @@ class ProductPostQueryServiceListTest {
 	}
 
 	@Test
+	void list_mapsRegionDongGuAndPlaceNameToCard() {
+		when(productPostLoadPort.findCards(any())).thenReturn(
+				ProductPostCardPageProjection.builder()
+						.content(List.of(
+								ProductPostCardProjection.builder()
+										.productPostUuid("pp-1")
+										.productPostName("가방")
+										.price(1_000_000L)
+										.tradeStatus(TradeStatus.SELLING)
+										.listedAt(Instant.parse("2026-08-25T00:00:00Z"))
+										.thumbnailUrl(null)
+										.regionDong("초량동")
+										.regionGu("동구")
+										.placeName("부산역")
+										.build()
+						))
+						.totalElements(1L)
+						.page(0)
+						.size(20)
+						.build()
+		);
+
+		ProductPostCardPageDto result = productPostQueryService.list(baseQuery(null).build());
+
+		assertThat(result.getContent()).hasSize(1);
+		assertThat(result.getContent().get(0).getRegionDong()).isEqualTo("초량동");
+		assertThat(result.getContent().get(0).getRegionGu()).isEqualTo("동구");
+		assertThat(result.getContent().get(0).getPlaceName()).isEqualTo("부산역");
+	}
+
+	@Test
 	void list_totalPages_reflectsFilteredTotalElements() {
 		when(productPostLoadPort.findCards(any())).thenReturn(
 				ProductPostCardPageProjection.builder()
@@ -81,6 +112,9 @@ class ProductPostQueryServiceListTest {
 										.tradeStatus(TradeStatus.SELLING)
 										.listedAt(Instant.parse("2026-08-25T00:00:00Z"))
 										.thumbnailUrl(null)
+										.regionDong(null)
+										.regionGu(null)
+										.placeName("부산역")
 										.build()
 						))
 						.totalElements(41L)

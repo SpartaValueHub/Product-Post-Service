@@ -42,6 +42,8 @@ public final class ProductPostEntityMapper {
 				entity.getLatitude(),
 				entity.getLongitude(),
 				entity.getPlaceName(),
+				entity.getRegionDong(),
+				entity.getRegionGu(),
 				entity.getBumpedAt(),
 				entity.getCreatedAt(),
 				entity.getUpdatedAt(),

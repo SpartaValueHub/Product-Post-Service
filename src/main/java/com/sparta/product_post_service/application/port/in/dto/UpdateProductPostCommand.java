@@ -27,6 +27,10 @@ public class UpdateProductPostCommand {
 	private final BigDecimal longitude;
 	// 거래 장소명
 	private final String placeName;
+	// 거래 희망 동(읍면동, optional)
+	private final String regionDong;
+	// 거래 희망 구(시군구, optional)
+	private final String regionGu;
 	// 상품 이미지 목록 (전체 교체)
 	private final List<CreateProductPostImageCommand> images;
 	// 서류 목록 (전체 교체, 선택)

@@ -68,6 +68,8 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
 | latitude | number | Y | 위도 |
 | longitude | number | Y | 경도 |
 | placeName | string | Y | 최대 100자 |
+| regionDong | string | N | 거래 희망 동(읍면동). 최대 50자. FE 표시 1순위 |
+| regionGu | string | N | 거래 희망 구(시군구). 최대 50자. FE 표시 2순위 (`regionDong` 없을 때) |
 | images | array | Y | 1~10개. **배열 순서 = 노출 순서**(0번 인덱스가 대표/썸네일). 서버가 `sort_order` 1..n 부여 |
 | images[].imageUrl | string | Y | 최대 500자 (업로드 URL) |
 | documents | array | N | 선택 |
@@ -84,6 +86,8 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
   "latitude": 37.5665,
   "longitude": 126.9780,
   "placeName": "서울역",
+  "regionDong": "회현동",
+  "regionGu": "중구",
   "images": [
     { "imageUrl": "https://cdn.example.com/product-posts/1.jpg" },
     { "imageUrl": "https://cdn.example.com/product-posts/2.jpg" }
@@ -186,6 +190,8 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
 | Body | latitude | number | Y | 위도 |
 | Body | longitude | number | Y | 경도 |
 | Body | placeName | string | Y | 최대 100자 |
+| Body | regionDong | string | N | 거래 희망 동(읍면동). 최대 50자. blank/미전달 시 null 저장 |
+| Body | regionGu | string | N | 거래 희망 구(시군구). 최대 50자. blank/미전달 시 null 저장 |
 | Body | images | array | Y | 1~10개. **전체 교체**. 배열 순서 = 노출 순서, 빠진 기존 이미지는 soft delete |
 | Body | images[].imageUrl | string | Y | 최대 500자 |
 | Body | documents | array | N | **전체 교체**. 빈 배열이면 기존 서류 전부 soft delete |
@@ -207,6 +213,8 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
   "latitude": 37.5665,
   "longitude": 126.9780,
   "placeName": "서울역",
+  "regionDong": "회현동",
+  "regionGu": "중구",
   "images": [
     { "imageUrl": "https://cdn.example.com/product-posts/1-new.jpg" },
     { "imageUrl": "https://cdn.example.com/product-posts/2-new.jpg" }
@@ -575,6 +583,9 @@ GET /api/v1/product-posts?tradeStatus=SELLING&page=1&size=20
 | content[].tradeStatus | string | `SELLING`/`RESERVED`/`SOLD_OUT` (카드 뱃지) |
 | content[].listedAt | string | 목록 기준 시각 ISO-8601 (FE 상대 시간) |
 | content[].thumbnailUrl | string\|null | 대표 이미지 URL |
+| content[].regionDong | string\|null | 거래 희망 동(읍면동). FE 표시 1순위 |
+| content[].regionGu | string\|null | 거래 희망 구(시군구). FE 표시 2순위 |
+| content[].placeName | string | 거래 희망 장소명. FE 표시 3순위 |
 | page | number | 현재 페이지 (1-based) |
 | size | number | 페이지 크기 |
 | totalElements | number | 전체 건수 |
@@ -589,7 +600,10 @@ GET /api/v1/product-posts?tradeStatus=SELLING&page=1&size=20
       "price": 1500000,
       "tradeStatus": "SELLING",
       "listedAt": "2026-08-12T01:00:00Z",
-      "thumbnailUrl": "https://cdn.example.com/product-posts/1.jpg"
+      "thumbnailUrl": "https://cdn.example.com/product-posts/1.jpg",
+      "regionDong": "초량동",
+      "regionGu": "동구",
+      "placeName": "부산역"
     }
   ],
   "page": 1,
@@ -598,6 +612,8 @@ GET /api/v1/product-posts?tradeStatus=SELLING&page=1&size=20
   "totalPages": 3
 }
 ```
+
+마이페이지 카피 권장: `regionDong ?? regionGu ?? placeName` → `{값}에서 거래`
 
 ### Errors
 
