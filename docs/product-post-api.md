@@ -173,7 +173,9 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
 | productPostStatus | string | 생성 시 `PUBLIC` |
 | latitude | number | 위도 |
 | longitude | number | 경도 |
-| placeName | string | 장소명 |
+| regionDong | string\|null | 거래 희망 동(읍면동). FE 표시 1순위 |
+| regionGu | string\|null | 거래 희망 구(시군구). FE 표시 2순위 |
+| placeName | string | 장소명. FE 표시 3순위 |
 | createdAt | string | ISO-8601 |
 | images | array | 저장된 이미지 요약 (`sortOrder` 포함, 서버가 부여한 값) |
 | documents | array | 저장된 서류 요약 |
@@ -191,6 +193,8 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
   "productPostStatus": "PUBLIC",
   "latitude": 37.5665,
   "longitude": 126.9780,
+  "regionDong": "회현동",
+  "regionGu": "중구",
   "placeName": "서울역",
   "createdAt": "2026-08-10T01:00:00Z",
   "images": [
@@ -211,6 +215,7 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
 ```
 
 > 요청에는 `sortOrder`가 없고, 응답의 `sortOrder`는 배열 위치 기준으로 서버가 채운 값이다.
+> `regionDong` / `regionGu`는 목록 카드와 동일 의미·필명이다. 수정·visibility·trade-status·bump·상세 응답도 동일 Summary 필드를 사용한다.
 ### Errors
 
 | status | code | 의미 |
@@ -565,6 +570,8 @@ Body 없음.
   "productPostStatus": "PUBLIC",
   "latitude": 37.5665,
   "longitude": 126.9780,
+  "regionDong": "회현동",
+  "regionGu": "중구",
   "placeName": "서울역",
   "createdAt": "2026-08-10T01:00:00Z",
   "images": [

@@ -37,6 +37,10 @@ public class ProductPostSummaryDto {
 	private final BigDecimal latitude;
 	// 경도
 	private final BigDecimal longitude;
+	// 거래 희망 동(읍면동, 없으면 null)
+	private final String regionDong;
+	// 거래 희망 구(시군구, 없으면 null)
+	private final String regionGu;
 	// 거래 장소명
 	private final String placeName;
 	// 마지막 끌올 시각
