@@ -32,6 +32,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
 	implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+	implementation platform('software.amazon.awssdk:bom:2.29.45')
+	implementation 'software.amazon.awssdk:s3'
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	annotationProcessor 'org.projectlombok:lombok'

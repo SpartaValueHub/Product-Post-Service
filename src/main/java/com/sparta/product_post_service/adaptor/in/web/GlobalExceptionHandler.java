@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.sparta.product_post_service.application.exception.ForbiddenException;
+import com.sparta.product_post_service.application.exception.MediaConfigurationException;
+import com.sparta.product_post_service.application.exception.MediaInvalidRequestException;
 import com.sparta.product_post_service.application.exception.UnauthorizedException;
 import com.sparta.product_post_service.domain.exception.ProductPostNotFoundException;
 
@@ -64,6 +66,24 @@ public class GlobalExceptionHandler {
 			HttpServletRequest request
 	) {
 		return buildError(HttpStatus.BAD_REQUEST, "INVALID_ARGUMENT", ex.getMessage(), request.getRequestURI());
+	}
+
+	// 미디어 Presigned 검증 실패
+	@ExceptionHandler(MediaInvalidRequestException.class)
+	public ResponseEntity<Map<String, Object>> handleMediaInvalidRequest(
+			MediaInvalidRequestException ex,
+			HttpServletRequest request
+	) {
+		return buildError(HttpStatus.BAD_REQUEST, ex.getCode(), ex.getMessage(), request.getRequestURI());
+	}
+
+	// 미디어 설정 누락
+	@ExceptionHandler(MediaConfigurationException.class)
+	public ResponseEntity<Map<String, Object>> handleMediaConfiguration(
+			MediaConfigurationException ex,
+			HttpServletRequest request
+	) {
+		return buildError(HttpStatus.INTERNAL_SERVER_ERROR, ex.getCode(), ex.getMessage(), request.getRequestURI());
 	}
 
 	// 인증·판매자 헤더 누락

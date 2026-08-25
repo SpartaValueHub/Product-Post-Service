@@ -20,6 +20,8 @@ import com.sparta.product_post_service.adaptor.in.web.mapper.ProductPostWebMappe
 import com.sparta.product_post_service.adaptor.in.web.vo.ChangeProductPostTradeStatusRequestVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ChangeProductPostVisibilityRequestVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.CreateProductPostRequestVo;
+import com.sparta.product_post_service.adaptor.in.web.vo.IssuePresignedUploadRequestVo;
+import com.sparta.product_post_service.adaptor.in.web.vo.IssuePresignedUploadResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostCardPageResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostSummaryResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.UpdateProductPostRequestVo;
@@ -29,8 +31,10 @@ import com.sparta.product_post_service.application.port.in.ChangeProductPostVisi
 import com.sparta.product_post_service.application.port.in.CreateProductPostUseCase;
 import com.sparta.product_post_service.application.port.in.DeleteProductPostUseCase;
 import com.sparta.product_post_service.application.port.in.GetProductPostUseCase;
+import com.sparta.product_post_service.application.port.in.IssuePresignedUploadUseCase;
 import com.sparta.product_post_service.application.port.in.ListProductPostsUseCase;
 import com.sparta.product_post_service.application.port.in.UpdateProductPostUseCase;
+import com.sparta.product_post_service.application.port.in.dto.IssuePresignedUploadResultDto;
 import com.sparta.product_post_service.application.port.in.dto.ProductPostCardPageDto;
 import com.sparta.product_post_service.application.port.in.dto.ProductPostSummaryDto;
 
@@ -59,6 +63,20 @@ public class ProductPostController {
 	private final GetProductPostUseCase getProductPostUseCase;
 	// 판매글 목록 조회 UseCase
 	private final ListProductPostsUseCase listProductPostsUseCase;
+	// 이미지 Presigned URL 발급 UseCase
+	private final IssuePresignedUploadUseCase issuePresignedUploadUseCase;
+
+	// 판매글 이미지 Presigned URL 발급 (FO)
+	@PostMapping("/media/presigned-url")
+	public IssuePresignedUploadResponseVo issuePresignedUpload(
+			@RequestHeader(value = InternalAuthHeaders.MEMBER_UUID, required = false) String memberUuid,
+			@RequestBody IssuePresignedUploadRequestVo request
+	) {
+		IssuePresignedUploadResultDto result = issuePresignedUploadUseCase.issuePresignedUpload(
+				ProductPostWebMapper.toPresignedCommand(memberUuid, request)
+		);
+		return ProductPostWebMapper.toPresignedResponse(result);
+	}
 
 	// 판매글 목록 조회 (FO 홈·마이페이지·프로필, Auth 불필요)
 	@GetMapping

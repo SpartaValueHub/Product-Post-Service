@@ -7,6 +7,8 @@ import com.sparta.product_post_service.adaptor.in.web.vo.ChangeProductPostVisibi
 import com.sparta.product_post_service.adaptor.in.web.vo.CreateProductPostDocumentRequestVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.CreateProductPostImageRequestVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.CreateProductPostRequestVo;
+import com.sparta.product_post_service.adaptor.in.web.vo.IssuePresignedUploadRequestVo;
+import com.sparta.product_post_service.adaptor.in.web.vo.IssuePresignedUploadResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostCardPageResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostCardResponseVo;
 import com.sparta.product_post_service.adaptor.in.web.vo.ProductPostDocumentResponseVo;
@@ -18,6 +20,8 @@ import com.sparta.product_post_service.application.port.in.dto.ChangeProductPost
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostCommand;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostDocumentCommand;
 import com.sparta.product_post_service.application.port.in.dto.CreateProductPostImageCommand;
+import com.sparta.product_post_service.application.port.in.dto.IssuePresignedUploadCommand;
+import com.sparta.product_post_service.application.port.in.dto.IssuePresignedUploadResultDto;
 import com.sparta.product_post_service.application.port.in.dto.ListProductPostsQuery;
 import com.sparta.product_post_service.application.port.in.dto.ProductPostCardDto;
 import com.sparta.product_post_service.application.port.in.dto.ProductPostCardPageDto;
@@ -215,6 +219,28 @@ public final class ProductPostWebMapper {
 				.productPostDocumentUuid(dto.getProductPostDocumentUuid())
 				.documentType(dto.getDocumentType())
 				.imageUrl(dto.getImageUrl())
+				.build();
+	}
+
+	// Presigned 요청 VO → Command
+	public static IssuePresignedUploadCommand toPresignedCommand(
+			String memberUuid,
+			IssuePresignedUploadRequestVo request
+	) {
+		return IssuePresignedUploadCommand.builder()
+				.memberUuid(memberUuid)
+				.contentType(request.getContentType())
+				.contentLength(request.getContentLength())
+				.build();
+	}
+
+	// Presigned 결과 → 응답 VO
+	public static IssuePresignedUploadResponseVo toPresignedResponse(IssuePresignedUploadResultDto dto) {
+		return IssuePresignedUploadResponseVo.builder()
+				.uploadUrl(dto.getUploadUrl())
+				.s3Key(dto.getS3Key())
+				.publicUrl(dto.getPublicUrl())
+				.expiresInSeconds(dto.getExpiresInSeconds())
 				.build();
 	}
 }
