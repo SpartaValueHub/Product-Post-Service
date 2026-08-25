@@ -54,6 +54,14 @@ public class UpdateProductPostRequestVo {
 	@Size(max = 100, message = "거래 장소명은 최대 100자까지 가능합니다.")
 	private String placeName;
 
+	// 거래 희망 동(읍면동, 선택)
+	@Size(max = 50, message = "거래 희망 동은 최대 50자까지 가능합니다.")
+	private String regionDong;
+
+	// 거래 희망 구(시군구, 선택)
+	@Size(max = 50, message = "거래 희망 구는 최대 50자까지 가능합니다.")
+	private String regionGu;
+
 	// 상품 이미지 목록 (1~10, 전체 교체)
 	@NotEmpty(message = "상품 사진은 최소 1장 필요합니다.")
 	@Size(max = 10, message = "상품 사진은 최대 10장까지 가능합니다.")

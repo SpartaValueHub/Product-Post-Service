@@ -52,6 +52,8 @@ public final class ProductPostWebMapper {
 				.latitude(request.getLatitude())
 				.longitude(request.getLongitude())
 				.placeName(request.getPlaceName())
+				.regionDong(request.getRegionDong())
+				.regionGu(request.getRegionGu())
 				.images(images)
 				.documents(documents)
 				.build();
@@ -95,6 +97,8 @@ public final class ProductPostWebMapper {
 				.latitude(request.getLatitude())
 				.longitude(request.getLongitude())
 				.placeName(request.getPlaceName())
+				.regionDong(request.getRegionDong())
+				.regionGu(request.getRegionGu())
 				.images(images)
 				.documents(documents)
 				.build();
@@ -150,6 +154,9 @@ public final class ProductPostWebMapper {
 				.tradeStatus(dto.getTradeStatus())
 				.listedAt(dto.getListedAt())
 				.thumbnailUrl(dto.getThumbnailUrl())
+				.regionDong(dto.getRegionDong())
+				.regionGu(dto.getRegionGu())
+				.placeName(dto.getPlaceName())
 				.build();
 	}
 

@@ -100,6 +100,14 @@ public class ProductPostEntity {
 	@Column(name = "place_name", nullable = false, length = 100)
 	private String placeName;
 
+	// 거래 희망 동(읍면동, 목록 카드용, 없으면 null)
+	@Column(name = "region_dong", length = 50)
+	private String regionDong;
+
+	// 거래 희망 구(시군구, 목록 카드용, 없으면 null)
+	@Column(name = "region_gu", length = 50)
+	private String regionGu;
+
 	// 마지막 끌올 시각
 	@Column(name = "bumped_at")
 	private Instant bumpedAt;
@@ -130,6 +138,8 @@ public class ProductPostEntity {
 			BigDecimal latitude,
 			BigDecimal longitude,
 			String placeName,
+			String regionDong,
+			String regionGu,
 			Instant createdAt
 	) {
 		return ProductPostEntity.builder()
@@ -145,6 +155,8 @@ public class ProductPostEntity {
 				.latitude(latitude)
 				.longitude(longitude)
 				.placeName(placeName)
+				.regionDong(regionDong)
+				.regionGu(regionGu)
 				.bumpedAt(null)
 				.createdAt(createdAt)
 				.updatedAt(null)
@@ -164,6 +176,8 @@ public class ProductPostEntity {
 			BigDecimal latitude,
 			BigDecimal longitude,
 			String placeName,
+			String regionDong,
+			String regionGu,
 			Instant bumpedAt,
 			Instant updatedAt,
 			Instant deletedAt
@@ -178,6 +192,8 @@ public class ProductPostEntity {
 		this.latitude = latitude;
 		this.longitude = longitude;
 		this.placeName = placeName;
+		this.regionDong = regionDong;
+		this.regionGu = regionGu;
 		this.bumpedAt = bumpedAt;
 		this.updatedAt = updatedAt;
 		this.deletedAt = deletedAt;

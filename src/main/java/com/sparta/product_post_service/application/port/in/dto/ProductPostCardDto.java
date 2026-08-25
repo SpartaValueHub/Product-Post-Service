@@ -24,4 +24,10 @@ public class ProductPostCardDto {
 	private final Instant listedAt;
 	// 대표 이미지 URL
 	private final String thumbnailUrl;
+	// 거래 희망 동(읍면동, 없으면 null → FE는 구·장소명 순으로 fallback)
+	private final String regionDong;
+	// 거래 희망 구(시군구, 없으면 null)
+	private final String regionGu;
+	// 거래 희망 장소명
+	private final String placeName;
 }

@@ -130,6 +130,9 @@ public class ProductPostLoadAdapter implements ProductPostLoadPort {
 				.tradeStatus(entity.getTradeStatus())
 				.listedAt(listedAt)
 				.thumbnailUrl(thumbnailUrl)
+				.regionDong(entity.getRegionDong())
+				.regionGu(entity.getRegionGu())
+				.placeName(entity.getPlaceName())
 				.build();
 	}
 

@@ -46,6 +46,8 @@ public class ProductPostSaveAdapter implements ProductPostSavePort {
 				listing.getLatitude(),
 				listing.getLongitude(),
 				listing.getPlaceName(),
+				listing.getRegionDong(),
+				listing.getRegionGu(),
 				listing.getCreatedAt()
 		));
 
@@ -77,6 +79,8 @@ public class ProductPostSaveAdapter implements ProductPostSavePort {
 				listing.getLatitude(),
 				listing.getLongitude(),
 				listing.getPlaceName(),
+				listing.getRegionDong(),
+				listing.getRegionGu(),
 				listing.getBumpedAt(),
 				listing.getUpdatedAt(),
 				listing.getDeletedAt()
