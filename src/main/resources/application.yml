@@ -20,6 +20,15 @@ product-post:
     bump-daily-limit: ${PRODUCT_POST_BUMP_DAILY_LIMIT:2}
     bump-cooldown-hours: ${PRODUCT_POST_BUMP_COOLDOWN_HOURS:12}
 
+# 이미지 Presigned 업로드 (EC2 Instance Role — Access Key 불필요)
+app:
+  media:
+    s3-bucket: ${S3_BUCKET:}
+    cloudfront-base-url: ${CLOUDFRONT_BASE_URL:}
+    aws-region: ${AWS_REGION:ap-northeast-2}
+    max-bytes: 5242880
+    presign-ttl-seconds: 300
+
 eureka:
   client:
     register-with-eureka: true

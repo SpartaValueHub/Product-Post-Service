@@ -36,6 +36,65 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
 | 401 | UNAUTHORIZED | `X-Member-Uuid` 없음·공백 |
 | 403 | FORBIDDEN | 판매자 본인이 아님 |
 | 404 | PRODUCT_POST_NOT_FOUND | 판매글 없음, 또는 숨김·삭제되어 미노출 |
+| 400 | INVALID_CONTENT_TYPE | Presigned: 허용되지 않는 Content-Type |
+| 400 | INVALID_CONTENT_LENGTH | Presigned: 용량 범위 초과·누락 |
+| 500 | MEDIA_CONFIG_MISSING | Presigned: S3_BUCKET / CLOUDFRONT_BASE_URL 미설정 |
+
+---
+
+## POST /api/v1/product-posts/media/presigned-url
+
+### Summary
+판매글·증빙 이미지 업로드용 S3 Presigned PUT URL과 CloudFront `publicUrl`을 발급한다.  
+발급 후 클라이언트가 S3에 PUT하고, 등록/수정 API의 `images[].imageUrl` / `documents[].imageUrl`에 `publicUrl`을 넣는다.
+
+### Method · Path
+`POST /api/v1/product-posts/media/presigned-url`
+
+### Auth
+필요. Gateway가 넣는 헤더:
+
+| Header | 필수 | 설명 |
+|--------|------|------|
+| `X-Member-Uuid` | Y | 판매자 회원 UUID |
+
+### Request (Body)
+
+| 필드 | 타입 | 필수 | 제약 |
+|------|------|------|------|
+| contentType | string | Y | `image/jpeg` · `image/png` · `image/webp` · `image/gif` |
+| contentLength | number | Y | 1 이상 5,242,880(5MB) 이하 |
+
+```json
+{
+  "contentType": "image/jpeg",
+  "contentLength": 1048576
+}
+```
+
+### Response (200)
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| uploadUrl | string | S3 Presigned PUT URL |
+| s3Key | string | `posts/{memberUuid}/{uuid}.{ext}` |
+| publicUrl | string | `CLOUDFRONT_BASE_URL` + `/` + s3Key |
+| expiresInSeconds | number | 기본 300 |
+
+### 클라이언트 업로드
+
+1. 본 API로 `uploadUrl`·`publicUrl` 수신
+2. `uploadUrl`로 **PUT** (헤더 `Content-Type`은 요청과 **동일**)
+3. `POST/PUT /product-posts`의 `imageUrl`에 `publicUrl` 전달
+
+### Errors
+
+| status | code | 의미 |
+|--------|------|------|
+| 400 | INVALID_CONTENT_TYPE | 허용되지 않는 Content-Type |
+| 400 | INVALID_CONTENT_LENGTH | 용량 범위 초과·누락 |
+| 401 | UNAUTHORIZED | `X-Member-Uuid` 없음·공백 |
+| 500 | MEDIA_CONFIG_MISSING | S3_BUCKET / CLOUDFRONT_BASE_URL 미설정 |
 
 ---
 
