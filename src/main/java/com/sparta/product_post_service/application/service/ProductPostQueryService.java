@@ -149,6 +149,8 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 				.productPostStatus(productPost.getProductPostStatus())
 				.latitude(productPost.getLatitude())
 				.longitude(productPost.getLongitude())
+				.regionDong(productPost.getRegionDong())
+				.regionGu(productPost.getRegionGu())
 				.placeName(productPost.getPlaceName())
 				.createdAt(productPost.getCreatedAt())
 				.images(images)

@@ -371,6 +371,8 @@ public class ProductPostCommandService implements CreateProductPostUseCase, Upda
 				.productPostStatus(listing.getProductPostStatus())
 				.latitude(listing.getLatitude())
 				.longitude(listing.getLongitude())
+				.regionDong(listing.getRegionDong())
+				.regionGu(listing.getRegionGu())
 				.placeName(listing.getPlaceName())
 				.bumpedAt(listing.getBumpedAt())
 				.createdAt(listing.getCreatedAt())
