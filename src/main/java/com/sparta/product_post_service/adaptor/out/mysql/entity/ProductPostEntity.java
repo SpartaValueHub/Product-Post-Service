@@ -13,6 +13,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -22,7 +23,21 @@ import lombok.NoArgsConstructor;
 
 // product_post 테이블 매핑 Entity
 @Entity
-@Table(name = "product_post")
+@Table(
+		name = "product_post",
+		indexes = {
+				// 마이페이지·프로필: member + tradeStatus + 공개/미삭제 조건 후 listed 정렬
+				@Index(
+						name = "idx_pp_member_trade_list",
+						columnList = "member_uuid, trade_status, product_post_status, deleted_at, bumped_at, created_at"
+				),
+				// 홈 피드: tradeStatus만으로 필터할 때
+				@Index(
+						name = "idx_pp_trade_public_list",
+						columnList = "trade_status, product_post_status, deleted_at, bumped_at, created_at"
+				)
+		}
+)
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

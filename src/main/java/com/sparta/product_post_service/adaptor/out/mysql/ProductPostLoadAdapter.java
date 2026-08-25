@@ -23,8 +23,6 @@ import com.sparta.product_post_service.application.port.out.dto.ProductPostCardP
 import com.sparta.product_post_service.application.port.out.dto.ProductPostListCriteria;
 import com.sparta.product_post_service.domain.model.DocumentType;
 import com.sparta.product_post_service.domain.model.ProductPost;
-import com.sparta.product_post_service.domain.model.ProductPostStatus;
-import com.sparta.product_post_service.domain.model.TradeStatus;
 
 import lombok.RequiredArgsConstructor;
 
@@ -32,13 +30,6 @@ import lombok.RequiredArgsConstructor;
 @Component
 @RequiredArgsConstructor
 public class ProductPostLoadAdapter implements ProductPostLoadPort {
-
-	// 목록에 노출하는 거래 상태 (숨김·삭제 제외, B 정책)
-	private static final List<TradeStatus> LIST_TRADE_STATUSES = List.of(
-			TradeStatus.SELLING,
-			TradeStatus.RESERVED,
-			TradeStatus.SOLD_OUT
-	);
 
 	// IN 절 placeholder (hasXxx=false 일 때 빈 IN 방지)
 	private static final List<String> UNUSED_STRINGS = List.of("__unused__");
@@ -76,8 +67,8 @@ public class ProductPostLoadAdapter implements ProductPostLoadPort {
 		String keyword = blankToNull(criteria.getKeyword());
 
 		Page<ProductPostEntity> page = productPostJpaRepository.searchForList(
-				ProductPostStatus.PUBLIC,
-				LIST_TRADE_STATUSES,
+				criteria.getProductPostStatus(),
+				criteria.getTradeStatuses(),
 				hasCategories,
 				hasCategories ? criteria.getCategoryUuids() : UNUSED_STRINGS,
 				memberUuid,

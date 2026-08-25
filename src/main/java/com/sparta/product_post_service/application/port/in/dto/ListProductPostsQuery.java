@@ -14,6 +14,8 @@ public class ListProductPostsQuery {
 	private final List<String> categoryUuids;
 	// 판매자(회원) UUID — 해당 회원의 글만 (프로필 모달용, null/blank면 미적용)
 	private final String memberUuid;
+	// 거래 상태 필터 (SELLING|RESERVED|SOLD_OUT, null/blank면 세 상태 전체)
+	private final String tradeStatus;
 	// 상품명 검색어
 	private final String keyword;
 	// 최소 가격
