@@ -17,6 +17,7 @@ import com.sparta.product_post_service.application.port.out.LoadBakedRelatedSear
 import com.sparta.product_post_service.application.port.out.LoadDictionaryRelatedSearchTermsPort;
 import com.sparta.product_post_service.application.port.out.LoadPopularSearchTermsPort;
 import com.sparta.product_post_service.config.SearchProperties;
+import com.sparta.product_post_service.support.SearchPropertiesTestFixture;
 
 @ExtendWith(MockitoExtension.class)
 class SearchQueryServiceTest {
@@ -106,30 +107,7 @@ class SearchQueryServiceTest {
 	}
 
 	private static SearchProperties testSearchProperties() {
-		return new SearchProperties(
-				5,
-				50,
-				2,
-				"search:terms:z",
-				"search:popular",
-				":building",
-				3_600_000L,
-				60_000L,
-				1.0d,
-				1.0d,
-				"search:popular:bake-lock",
-				300_000L,
-				"1",
-				"search:cooc:z:",
-				"search:cooc:sources",
-				1.0d,
-				"search:related:",
-				2.0d,
-				"search:related:bake-lock",
-				"search:session:last:",
-				"m:",
-				"s:",
-				1_800_000L,
+		return SearchPropertiesTestFixture.withPopularSeedAndRelated(
 				List.of("롤렉스", "샤넬백", "빈티지 백"),
 				Map.of(
 						"샤넬백", List.of("샤넬백 보증서", "샤넬 클래식"),

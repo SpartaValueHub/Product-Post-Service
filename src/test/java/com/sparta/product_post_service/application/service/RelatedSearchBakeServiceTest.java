@@ -10,7 +10,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -22,7 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.sparta.product_post_service.application.port.out.LoadSearchCooccurrencePort;
 import com.sparta.product_post_service.application.port.out.RelatedSearchBakeLockPort;
 import com.sparta.product_post_service.application.port.out.SaveRelatedSearchTermsPort;
-import com.sparta.product_post_service.config.SearchProperties;
+import com.sparta.product_post_service.support.SearchPropertiesTestFixture;
 
 @ExtendWith(MockitoExtension.class)
 class RelatedSearchBakeServiceTest {
@@ -44,33 +43,7 @@ class RelatedSearchBakeServiceTest {
 				loadSearchCooccurrencePort,
 				saveRelatedSearchTermsPort,
 				relatedSearchBakeLockPort,
-				new SearchProperties(
-						5,
-						50,
-						2,
-						"search:terms:z",
-						"search:popular",
-						":building",
-						3_600_000L,
-						60_000L,
-						1.0d,
-						1.0d,
-						"search:popular:bake-lock",
-						300_000L,
-						"1",
-						"search:cooc:z:",
-						"search:cooc:sources",
-						1.0d,
-						"search:related:",
-						2.0d,
-						"search:related:bake-lock",
-						"search:session:last:",
-						"m:",
-						"s:",
-						1_800_000L,
-						List.of(),
-						Map.of()
-				)
+				SearchPropertiesTestFixture.minimal()
 		);
 	}
 

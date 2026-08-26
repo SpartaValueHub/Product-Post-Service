@@ -14,8 +14,12 @@ public record SearchProperties(
 		int keywordMaxLength,
 		// FULLTEXT(ngram) 최소 검색어 길이 (미만이면 목록 빈 결과)
 		int fulltextMinKeywordLength,
-		// 검색어 점수 ZSET 키 (기록용)
+		// (레거시) 전체 누적 ZSET 키 — 가중 점수 도입 후 기록에 사용하지 않음
 		String termsZsetKey,
+		// 시간 버킷 ZSET 키 prefix (뒤에 yyyyMMddHH)
+		String termsHourlyZsetKeyPrefix,
+		// 시간 버킷 TTL (ms) — 7일 윈도우보다 길게
+		long termsHourlyTtlMs,
 		// 추천 검색어 서빙 LIST 키 (배치 스냅샷)
 		String popularServingKey,
 		// LIST 스냅샷 교체용 임시 접미사
@@ -24,10 +28,24 @@ public record SearchProperties(
 		long bakeIntervalMs,
 		// 앱 기동 후 첫 베이크까지 대기 (ms)
 		long bakeInitialDelayMs,
-		// 추천 TopN에 넣을 최소 ZSET 점수
+		// 추천 TopN에 넣을 최소 가중 점수
 		double bakeMinScore,
+		// 24h/7d 각각에서 가중 후보로 가져올 상위 건수 (전체 스캔 방지)
+		int bakeCandidateLimit,
 		// 검색어 카운터 1회 증가분
 		double termScoreIncrement,
+		// 최근 24시간 가중
+		double weightRecent24h,
+		// 24시간 제외 최근 7일 가중
+		double weightRecent7dRemainder,
+		// 최근 윈도우(시간)
+		int recentWindowHours24h,
+		// 7일 윈도우(시간)
+		int recentWindowHours7d,
+		// 점수 집계 타임존
+		String scoreZoneId,
+		// 집계 임시 키 prefix
+		String termsAggregateTempKeyPrefix,
 		// 다중 인스턴스 추천 베이크 분산 락 키
 		String bakeLockKey,
 		// 분산 락 TTL (ms)
@@ -72,6 +90,12 @@ public record SearchProperties(
 		if (termsZsetKey == null || termsZsetKey.isBlank()) {
 			termsZsetKey = "search:terms:z";
 		}
+		if (termsHourlyZsetKeyPrefix == null || termsHourlyZsetKeyPrefix.isBlank()) {
+			termsHourlyZsetKeyPrefix = "search:terms:h:";
+		}
+		if (termsHourlyTtlMs <= 0) {
+			termsHourlyTtlMs = 691_200_000L;
+		}
 		if (popularServingKey == null || popularServingKey.isBlank()) {
 			popularServingKey = "search:popular";
 		}
@@ -87,8 +111,29 @@ public record SearchProperties(
 		if (bakeMinScore < 0) {
 			bakeMinScore = 1.0d;
 		}
+		if (bakeCandidateLimit <= 0) {
+			bakeCandidateLimit = 500;
+		}
 		if (termScoreIncrement <= 0) {
 			termScoreIncrement = 1.0d;
+		}
+		if (weightRecent24h <= 0) {
+			weightRecent24h = 3.0d;
+		}
+		if (weightRecent7dRemainder <= 0) {
+			weightRecent7dRemainder = 1.0d;
+		}
+		if (recentWindowHours24h <= 0) {
+			recentWindowHours24h = 24;
+		}
+		if (recentWindowHours7d <= 0) {
+			recentWindowHours7d = 168;
+		}
+		if (scoreZoneId == null || scoreZoneId.isBlank()) {
+			scoreZoneId = "Asia/Seoul";
+		}
+		if (termsAggregateTempKeyPrefix == null || termsAggregateTempKeyPrefix.isBlank()) {
+			termsAggregateTempKeyPrefix = "search:terms:agg:";
 		}
 		if (bakeLockKey == null || bakeLockKey.isBlank()) {
 			bakeLockKey = "search:popular:bake-lock";
