@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 // S3 Presigner — EC2 Instance Role / 로컬 DefaultCredentialsProvider
@@ -18,6 +19,17 @@ public class MediaAwsConfig {
 				? "ap-northeast-2"
 				: mediaProperties.awsRegion();
 		return S3Presigner.builder()
+				.region(Region.of(region))
+				.credentialsProvider(DefaultCredentialsProvider.create())
+				.build();
+	}
+
+	@Bean(destroyMethod = "close")
+	public S3Client s3Client(MediaProperties mediaProperties) {
+		String region = mediaProperties.awsRegion() == null || mediaProperties.awsRegion().isBlank()
+				? "ap-northeast-2"
+				: mediaProperties.awsRegion();
+		return S3Client.builder()
 				.region(Region.of(region))
 				.credentialsProvider(DefaultCredentialsProvider.create())
 				.build();

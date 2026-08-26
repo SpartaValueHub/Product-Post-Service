@@ -55,6 +55,8 @@ public class ProductPostCommandService implements CreateProductPostUseCase, Upda
 	private final ProductPostSavePort productPostSavePort;
 	// 판매글 조회 Port (수정 시 기존 데이터 로드)
 	private final ProductPostLoadPort productPostLoadPort;
+	// pending 미디어 승격
+	private final PromotePendingMediaService promotePendingMediaService;
 	// 끌올 일일 횟수 조회 Port
 	private final BumpQuotaLoadPort bumpQuotaLoadPort;
 	// 끌올 일일 횟수 저장 Port
@@ -74,8 +76,9 @@ public class ProductPostCommandService implements CreateProductPostUseCase, Upda
 		requireMemberUuid(memberUuid);
 
 		Instant createdAt = Instant.now(clock);
-		List<ProductPostImage> images = toImages(command.getImages(), createdAt);
-		List<ProductPostDocument> documents = toDocuments(command.getDocuments(), createdAt);
+		PromotedMedia promoted = promoteMedia(memberUuid.trim(), command.getImages(), command.getDocuments());
+		List<ProductPostImage> images = toImages(promoted.imageUrls(), createdAt);
+		List<ProductPostDocument> documents = toDocuments(command.getDocuments(), promoted.documentUrls(), createdAt);
 
 		ProductPost productPost = ProductPost.create(
 				newUuid(),
@@ -119,8 +122,10 @@ public class ProductPostCommandService implements CreateProductPostUseCase, Upda
 		}
 
 		Instant updatedAt = Instant.now(clock);
-		List<ProductPostImage> images = toImages(command.getImages(), updatedAt);
-		List<ProductPostDocument> documents = toDocuments(command.getDocuments(), updatedAt);
+		List<String> previousMediaUrls = collectMediaUrls(existing);
+		PromotedMedia promoted = promoteMedia(memberUuid.trim(), command.getImages(), command.getDocuments());
+		List<ProductPostImage> images = toImages(promoted.imageUrls(), updatedAt);
+		List<ProductPostDocument> documents = toDocuments(command.getDocuments(), promoted.documentUrls(), updatedAt);
 
 		existing.updateContent(
 				command.getCategoryUuid(),
@@ -140,6 +145,7 @@ public class ProductPostCommandService implements CreateProductPostUseCase, Upda
 		);
 
 		ProductPost saved = productPostSavePort.update(existing);
+		deleteRemovedConfirmedMedia(memberUuid.trim(), previousMediaUrls, collectMediaUrls(saved));
 		return toSummary(saved);
 	}
 
@@ -309,17 +315,40 @@ public class ProductPostCommandService implements CreateProductPostUseCase, Upda
 		}
 	}
 
-	// 이미지 Command → Domain (배열 인덱스+1 이 sort_order, 0번이 대표/썸네일)
-	private List<ProductPostImage> toImages(List<CreateProductPostImageCommand> images, Instant createdAt) {
-		if (images == null) {
+	// 이미지·서류 URL을 한 번에 승격한다. 일부 실패 시 전부 실패.
+	private PromotedMedia promoteMedia(
+			String memberUuid,
+			List<CreateProductPostImageCommand> images,
+			List<CreateProductPostDocumentCommand> documents
+	) {
+		List<String> requested = new ArrayList<>();
+		int imageCount = images == null ? 0 : images.size();
+		if (images != null) {
+			for (CreateProductPostImageCommand image : images) {
+				requested.add(image.getImageUrl());
+			}
+		}
+		if (documents != null) {
+			for (CreateProductPostDocumentCommand document : documents) {
+				requested.add(document.getImageUrl());
+			}
+		}
+		List<String> persisted = promotePendingMediaService.persistAll(memberUuid, requested);
+		List<String> imageUrls = persisted.subList(0, imageCount);
+		List<String> documentUrls = persisted.subList(imageCount, persisted.size());
+		return new PromotedMedia(imageUrls, documentUrls);
+	}
+
+	// 승격된 이미지 URL → Domain (배열 인덱스+1 이 sort_order)
+	private List<ProductPostImage> toImages(List<String> imageUrls, Instant createdAt) {
+		if (imageUrls == null || imageUrls.isEmpty()) {
 			return List.of();
 		}
-		List<ProductPostImage> result = new ArrayList<>(images.size());
-		for (int i = 0; i < images.size(); i++) {
-			CreateProductPostImageCommand image = images.get(i);
+		List<ProductPostImage> result = new ArrayList<>(imageUrls.size());
+		for (int i = 0; i < imageUrls.size(); i++) {
 			result.add(ProductPostImage.create(
 					newUuid(),
-					image.getImageUrl(),
+					imageUrls.get(i),
 					i + 1,
 					createdAt
 			));
@@ -327,19 +356,52 @@ public class ProductPostCommandService implements CreateProductPostUseCase, Upda
 		return List.copyOf(result);
 	}
 
-	// 서류 Command → Domain
-	private List<ProductPostDocument> toDocuments(List<CreateProductPostDocumentCommand> documents, Instant createdAt) {
+	// 승격된 서류 URL → Domain
+	private List<ProductPostDocument> toDocuments(
+			List<CreateProductPostDocumentCommand> documents,
+			List<String> imageUrls,
+			Instant createdAt
+	) {
 		if (documents == null || documents.isEmpty()) {
 			return List.of();
 		}
-		return documents.stream()
-				.map(document -> ProductPostDocument.create(
-						newUuid(),
-						document.getDocumentType(),
-						document.getImageUrl(),
-						createdAt
-				))
-				.toList();
+		List<ProductPostDocument> result = new ArrayList<>(documents.size());
+		for (int i = 0; i < documents.size(); i++) {
+			CreateProductPostDocumentCommand document = documents.get(i);
+			result.add(ProductPostDocument.create(
+					newUuid(),
+					document.getDocumentType(),
+					imageUrls.get(i),
+					createdAt
+			));
+		}
+		return List.copyOf(result);
+	}
+
+	// 승격 결과 (이미지 URL / 서류 URL)
+	private record PromotedMedia(
+			// 승격된 이미지 publicUrl
+			List<String> imageUrls,
+			// 승격된 서류 publicUrl
+			List<String> documentUrls
+	) {
+	}
+
+	// 활성 이미지·서류 publicUrl 목록
+	private List<String> collectMediaUrls(ProductPost productPost) {
+		List<String> urls = new ArrayList<>();
+		productPost.activeImages().forEach(image -> urls.add(image.getImageUrl()));
+		productPost.activeDocuments().forEach(document -> urls.add(document.getImageUrl()));
+		return urls;
+	}
+
+	// 수정 후 빠진 정식 객체를 저장소에서 제거한다.
+	private void deleteRemovedConfirmedMedia(String memberUuid, List<String> previousUrls, List<String> nextUrls) {
+		for (String previousUrl : previousUrls) {
+			if (!nextUrls.contains(previousUrl)) {
+				promotePendingMediaService.deleteConfirmedIfOwned(memberUuid, previousUrl);
+			}
+		}
 	}
 
 	// Domain → 요약 DTO (활성 이미지·서류만)

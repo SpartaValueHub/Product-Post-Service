@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.sparta.product_post_service.application.exception.ForbiddenException;
 import com.sparta.product_post_service.application.exception.MediaConfigurationException;
 import com.sparta.product_post_service.application.exception.MediaInvalidRequestException;
+import com.sparta.product_post_service.application.exception.MediaStorageException;
 import com.sparta.product_post_service.application.exception.UnauthorizedException;
 import com.sparta.product_post_service.domain.exception.ProductPostNotFoundException;
 
@@ -81,6 +82,14 @@ public class GlobalExceptionHandler {
 	@ExceptionHandler(MediaConfigurationException.class)
 	public ResponseEntity<Map<String, Object>> handleMediaConfiguration(
 			MediaConfigurationException ex,
+			HttpServletRequest request
+	) {
+		return buildError(HttpStatus.INTERNAL_SERVER_ERROR, ex.getCode(), ex.getMessage(), request.getRequestURI());
+	}
+
+	@ExceptionHandler(MediaStorageException.class)
+	public ResponseEntity<Map<String, Object>> handleMediaStorage(
+			MediaStorageException ex,
 			HttpServletRequest request
 	) {
 		return buildError(HttpStatus.INTERNAL_SERVER_ERROR, ex.getCode(), ex.getMessage(), request.getRequestURI());

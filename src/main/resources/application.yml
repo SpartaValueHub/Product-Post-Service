@@ -4,7 +4,7 @@ product-post:
     min-price: ${PRODUCT_POST_MIN_PRICE:500000}
     bump-daily-limit: ${PRODUCT_POST_BUMP_DAILY_LIMIT:2}
     bump-cooldown-hours: ${PRODUCT_POST_BUMP_COOLDOWN_HOURS:12}
-	search:
+  search:
     popular-limit: 10
     keyword-max-length: 50
     # MySQL ngram_token_size 기본값과 맞춤
@@ -61,6 +61,13 @@ app:
     aws-region: ${AWS_REGION:ap-northeast-2}
     max-bytes: 5242880
     presign-ttl-seconds: 300
+    pending-prefix: pending/
+    confirmed-prefix: posts/
+    extension-by-content-type:
+      "image/jpeg": jpg
+      "image/png": png
+      "image/webp": webp
+      "image/gif": gif
 
 eureka:
   client:
