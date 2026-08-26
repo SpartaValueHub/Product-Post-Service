@@ -248,7 +248,9 @@ Category가 필요하면 Product-Post가 Category를 **조회·참고**할 뿐, 
 
 | 키 | 용도 |
 |----|------|
-| `search:terms:z` | 검색어 점수 ZSET (`ZINCRBY` — 기록 전용) |
+| `search:terms:h:{yyyyMMddHH}` | 시간 버킷 검색어 ZSET (`ZINCRBY`, TTL ~8일) |
+| `search:terms:agg:{uuid}` | 베이크 시 ZUNIONSTORE 임시 키 |
+| `search:terms:z` | (레거시) 전체 누적 ZSET — 가중 점수 도입 후 미사용 |
 | `search:popular` | 추천 TopN 서빙 LIST (`@Scheduled` 베이크 스냅샷) |
 | `search:popular:bake-lock` | 다중 인스턴스 추천 베이크 분산 락 |
 | `search:cooc:z:{q}` | q 다음 검색어 동시검색 ZSET |
@@ -268,14 +270,17 @@ Category가 필요하면 Product-Post가 Category를 **조회·참고**할 뿐, 
 3. **일반 검색 연결** — keyword 정규화 + 비동기 Redis 카운터 — 완료
 4. **일반 검색 쿼리 개선** — `LIKE %…%` → MySQL FULLTEXT(ngram, 제목만) — 완료
 5. **추천 TopN 주기 베이크** — `@Scheduled` → `search:popular` 서빙 분리 — 완료
-6. **연관 동시검색 베이크** — 세션 A→B 카운터 → `search:related:{q}` — 이번 이슈
+5-b. **추천 가중 점수(24h/7d)** — 시간 버킷 + 가중 베이크 — 진행
+6. **연관 동시검색 베이크** — 세션 A→B 카운터 → `search:related:{q}` — 완료
 7. (선택) 자동완성 `suggestions`, 최근 검색어(유저별 Redis)
 
 ### 추천 TopN 베이크 요약
 
 - 기술: `@Scheduled` (Spring Batch 프레임워크 아님). 주기·키·최소점수는 YAML
 - 기본: `popular-limit=5`, `bake-interval-ms=3600000`(60분)
-- Enter → `ZINCRBY terms-zset` / 스케줄 → TopN → `popular-serving-key` LIST
+- Enter → 현재 시각 hour 버킷 `ZINCRBY` / 스케줄 → 24h·7d 집계 → 가중 점수 → TopN → `popular-serving-key` LIST
+- 가중: `score = count24h × weight-recent-24h + max(0, count7d − count24h) × weight-recent-7d-remainder`
+- 후보 상한: 윈도우별 `bake-candidate-limit`(기본 500) — 전체 멤버 스캔 금지
 - API는 서빙 LIST만 읽음. 비면 YAML seed
 - 다중 인스턴스: Redis `SET NX` 락
 
@@ -290,7 +295,7 @@ Category가 필요하면 Product-Post가 Category를 **조회·참고**할 뿐, 
 
 ### 아직 미룬 것
 
-- 가중 점수(24h/7d/클릭), 금칙어 필터, 동시검색 연관, Category HTTP 연동
+- 클릭 가중, 금칙어 필터, Category HTTP 연동
 - 자동완성·최근 검색어·운영 pin Admin
 - 제목+본문 FULLTEXT, 리드 레플리카
 

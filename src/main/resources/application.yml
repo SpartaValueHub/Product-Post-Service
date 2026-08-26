@@ -10,13 +10,25 @@ product-post:
     # MySQL ngram_token_size 기본값과 맞춤
     fulltext-min-keyword-length: 2
     terms-zset-key: search:terms:z
+    terms-hourly-zset-key-prefix: "search:terms:h:"
+    # 8일 (7일 윈도우 + 여유)
+    terms-hourly-ttl-ms: 691200000
     popular-serving-key: search:popular
     snapshot-building-suffix: ":building"
     # 추천·연관 TopN 베이크 주기 (기본 60분)
     bake-interval-ms: 3600000
     bake-initial-delay-ms: 60000
     bake-min-score: 1
+    # 24h/7d 각 윈도우에서 가중 후보 상한 (전체 멤버 스캔 방지)
+    bake-candidate-limit: 500
     term-score-increment: 1
+    # 가중: 24h×3 + (7d-24h)×1 (클릭 가중은 후속)
+    weight-recent-24h: 3
+    weight-recent-7d-remainder: 1
+    recent-window-hours-24h: 24
+    recent-window-hours-7d: 168
+    score-zone-id: Asia/Seoul
+    terms-aggregate-temp-key-prefix: "search:terms:agg:"
     bake-lock-key: search:popular:bake-lock
     bake-lock-ttl-ms: 300000
     bake-lock-value: "1"
