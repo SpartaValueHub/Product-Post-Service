@@ -78,6 +78,20 @@ cd ../Listing-Service && ./gradlew bootRun
 
 Eureka Dashboard (`http://localhost:8761`) 에서 `PRODUCT-POST-SERVICE` 등록을 확인합니다.
 
+## Redis (헤더 검색 추천·카운터)
+
+Auth / Gateway와 **동일 Redis**를 사용합니다. Product-Post에 Redis 컨테이너를 따로 두지 않습니다.
+
+| 환경 | 준비 |
+|------|------|
+| local | Auth-Service 루트 `docker compose up -d` (redis:6379) 후 `.env`에 아래 변수 |
+| Apps EC2 | 기존 Auth용 Redis + compose `.env`에 동일 변수 |
+
+| 변수 | 설명 | 예시 |
+|------|------|------|
+| `REDIS_HOST` | Redis 호스트 | `127.0.0.1` |
+| `REDIS_PORT` | Redis 포트 | `6379` |
+
 ## 필수 환경변수 (local)
 
 | 변수 | 설명 |
@@ -85,6 +99,7 @@ Eureka Dashboard (`http://localhost:8761`) 에서 `PRODUCT-POST-SERVICE` 등록�
 | `SPRING_DATASOURCE_URL` | MySQL JDBC URL (`product_post_db` 스키마) |
 | `SPRING_DATASOURCE_USERNAME` | DB 사용자 |
 | `SPRING_DATASOURCE_PASSWORD` | DB 비밀번호 |
+| `REDIS_HOST` / `REDIS_PORT` | 검색어 카운터·인기 검색 (Auth와 동일) |
 
 ## 필수 환경변수 (dev / prod)
 
@@ -94,6 +109,7 @@ Eureka Dashboard (`http://localhost:8761`) 에서 `PRODUCT-POST-SERVICE` 등록�
 | `SPRING_DATASOURCE_USERNAME` | DB 사용자 |
 | `SPRING_DATASOURCE_PASSWORD` | DB 비밀번호 |
 | `EUREKA_CLIENT_SERVICEURL_DEFAULTZONE` | Eureka Server URL |
+| `REDIS_HOST` / `REDIS_PORT` | Auth와 동일 Redis (Apps EC2 localhost) |
 
 ## 패키지 구조 (Hexagonal)
 

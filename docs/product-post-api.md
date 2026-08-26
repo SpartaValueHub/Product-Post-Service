@@ -604,6 +604,8 @@ Body 없음.
 ### Summary
 판매글 목록을 조회한다. (FO 홈·헤더 검색·필터·페이징)
 
+헤더의 추천·연관 검색어 API는 [search-api.md](./search-api.md) 참고. `keyword` 검색 시 Redis 카운터는 비동기로 적재된다.
+
 ### Method · Path
 `GET /api/v1/product-posts`
 

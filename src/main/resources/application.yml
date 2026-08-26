@@ -1,3 +1,37 @@
+# 판매글 서비스 정책 (환경별로 덮어쓸 수 있음)
+product-post:
+  policy:
+    min-price: ${PRODUCT_POST_MIN_PRICE:500000}
+    bump-daily-limit: ${PRODUCT_POST_BUMP_DAILY_LIMIT:2}
+    bump-cooldown-hours: ${PRODUCT_POST_BUMP_COOLDOWN_HOURS:12}
+  search:
+    popular-limit: 10
+    keyword-max-length: 50
+    terms-zset-key: search:terms:z
+    popular-seed:
+      - 롤렉스
+      - 샤넬백
+      - 빈티지 백
+      - 보증몬드 반지
+      - 오메가
+      - 에르메스
+      - 보증통
+      - 골드바
+      - 명품시계
+      - 보증목걸이
+    related:
+      샤넬백:
+        - 샤넬백 보증서
+        - 샤넬 클래식
+        - 샤넬백 A급
+      롤렉스:
+        - 롤렉스 서브마리너
+        - 롤렉스 데이토나
+        - 롤렉스 보증서
+      빈티지 백:
+        - 빈티지 샤넬
+        - 빈티지 에르메스
+
 spring:
   application:
     name: product-post-service
@@ -12,13 +46,10 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
     open-in-view: false
-
-# 판매글 서비스 정책 (환경별로 덮어쓸 수 있음)
-product-post:
-  policy:
-    min-price: ${PRODUCT_POST_MIN_PRICE:500000}
-    bump-daily-limit: ${PRODUCT_POST_BUMP_DAILY_LIMIT:2}
-    bump-cooldown-hours: ${PRODUCT_POST_BUMP_COOLDOWN_HOURS:12}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
 
 # 이미지 Presigned 업로드 (EC2 Instance Role — Access Key 불필요)
 app:
