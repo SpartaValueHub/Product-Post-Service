@@ -235,6 +235,7 @@ Product-Post-Service
   ├─ GET /api/v1/product-posts?keyword=     (기존 일반 검색 — 이후 FULLTEXT 등 개선)
   ├─ GET /api/v1/search/popular             (추천 검색어)
   ├─ GET /api/v1/search/related?q=          (연관 검색어)
+  ├─ GET /api/v1/search/suggestions?q=      (자동완성)
   └─ (내부) 검색 로그 적재 + 배치/스케줄로 Redis 갱신
 ```
 
@@ -258,6 +259,8 @@ Category가 필요하면 Product-Post가 Category를 **조회·참고**할 뿐, 
 | `search:related:{q}` | 연관 TopN 서빙 LIST |
 | `search:related:bake-lock` | 연관 베이크 분산 락 |
 | `search:session:last:{sessionKey}` | 세션 직전 검색어 |
+| `search:suggest:dict` | 자동완성 lex ZSET (`ZRANGEBYLEX`, 베이크 스냅샷) |
+| `search:suggest:bake-lock` | 자동완성 사전 베이크 분산 락 |
 
 연관: 베이크 LIST → YAML 사전 → popular fallback. Redis 연관 맵은 동시검색 베이크로 채움.
 
@@ -270,9 +273,10 @@ Category가 필요하면 Product-Post가 Category를 **조회·참고**할 뿐, 
 3. **일반 검색 연결** — keyword 정규화 + 비동기 Redis 카운터 — 완료
 4. **일반 검색 쿼리 개선** — `LIKE %…%` → MySQL FULLTEXT(ngram, 제목만) — 완료
 5. **추천 TopN 주기 베이크** — `@Scheduled` → `search:popular` 서빙 분리 — 완료
-5-b. **추천 가중 점수(24h/7d)** — 시간 버킷 + 가중 베이크 — 진행
+5-b. **추천 가중 점수(24h/7d)** — 시간 버킷 + 가중 베이크 — 완료
 6. **연관 동시검색 베이크** — 세션 A→B 카운터 → `search:related:{q}` — 완료
-7. (선택) 자동완성 `suggestions`, 최근 검색어(유저별 Redis)
+7. **자동완성** `suggestions` — Redis lex 사전 + YAML fallback — 진행
+8. (선택) 최근 검색어(유저별 Redis)
 
 ### 추천 TopN 베이크 요약
 
@@ -296,8 +300,9 @@ Category가 필요하면 Product-Post가 Category를 **조회·참고**할 뿐, 
 ### 아직 미룬 것
 
 - 클릭 가중, 금칙어 필터, Category HTTP 연동
-- 자동완성·최근 검색어·운영 pin Admin
+- 최근 검색어·운영 pin Admin
 - 제목+본문 FULLTEXT, 리드 레플리카
+- 자동완성 인기순 정렬(현재 lex 사전순)
 
 
 ---

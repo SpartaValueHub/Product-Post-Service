@@ -5,10 +5,11 @@ import org.springframework.stereotype.Component;
 
 import com.sparta.product_post_service.application.port.in.BakePopularSearchTermsUseCase;
 import com.sparta.product_post_service.application.port.in.BakeRelatedSearchTermsUseCase;
+import com.sparta.product_post_service.application.port.in.BakeSuggestionDictionaryUseCase;
 
 import lombok.RequiredArgsConstructor;
 
-// 추천·연관 검색어 스냅샷 주기 베이크 트리거 (Inbound → UseCase만 호출)
+// 추천·연관·자동완성 사전 스냅샷 주기 베이크 트리거 (Inbound → UseCase만 호출)
 @Component
 @RequiredArgsConstructor
 public class SearchSnapshotBakeScheduler {
@@ -17,6 +18,8 @@ public class SearchSnapshotBakeScheduler {
 	private final BakePopularSearchTermsUseCase bakePopularSearchTermsUseCase;
 	// 연관 동시검색 베이크
 	private final BakeRelatedSearchTermsUseCase bakeRelatedSearchTermsUseCase;
+	// 자동완성 사전 베이크
+	private final BakeSuggestionDictionaryUseCase bakeSuggestionDictionaryUseCase;
 
 	// 주기·초기 지연은 YAML (product-post.search.bake-*-ms)
 	@Scheduled(
@@ -26,5 +29,6 @@ public class SearchSnapshotBakeScheduler {
 	public void bakeSearchSnapshots() {
 		bakePopularSearchTermsUseCase.bake();
 		bakeRelatedSearchTermsUseCase.bake();
+		bakeSuggestionDictionaryUseCase.bake();
 	}
 }

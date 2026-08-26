@@ -52,6 +52,10 @@ public final class SearchPropertiesTestFixture {
 				"m:",
 				"s:",
 				1_800_000L,
+				2,
+				"search:suggest:dict",
+				2000,
+				"search:suggest:bake-lock",
 				popularSeed,
 				related
 		);

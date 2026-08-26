@@ -43,6 +43,11 @@ product-post:
     session-anonymous-prefix: "s:"
     # 직전 검색어 TTL (기본 30분)
     session-last-ttl-ms: 1800000
+    # 자동완성 (개수는 popular-limit 과 동일)
+    suggestions-min-length: 2
+    suggestions-dict-key: search:suggest:dict
+    suggestions-dict-limit: 2000
+    suggestions-bake-lock-key: search:suggest:bake-lock
     popular-seed:
       - 롤렉스
       - 샤넬백
