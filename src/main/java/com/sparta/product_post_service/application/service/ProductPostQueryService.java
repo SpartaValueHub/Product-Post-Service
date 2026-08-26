@@ -20,6 +20,8 @@ import com.sparta.product_post_service.application.port.in.dto.ProductPostSummar
 import com.sparta.product_post_service.application.port.out.ProductPostLoadPort;
 import com.sparta.product_post_service.application.port.out.dto.ProductPostCardPageProjection;
 import com.sparta.product_post_service.application.port.out.dto.ProductPostListCriteria;
+import com.sparta.product_post_service.application.support.SearchTermNormalizer;
+import com.sparta.product_post_service.config.SearchProperties;
 import com.sparta.product_post_service.domain.exception.ProductPostNotFoundException;
 import com.sparta.product_post_service.domain.model.DocumentType;
 import com.sparta.product_post_service.domain.model.ProductPost;
@@ -42,6 +44,10 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 
 	// 판매글 조회 Port
 	private final ProductPostLoadPort productPostLoadPort;
+	// 검색어 비동기 기록
+	private final SearchTermRecordingService searchTermRecordingService;
+	// 검색 정책 (키워드 길이 등)
+	private final SearchProperties searchProperties;
 
 	// 공개 판매글 상세 조회 (HIDDEN·DELETED는 미존재와 동일 처리)
 	@Override
@@ -70,7 +76,10 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 		List<String> categoryUuids = normalizeUuids(query.getCategoryUuids());
 		List<TradeStatus> tradeStatuses = normalizeTradeStatuses(query.getTradeStatus());
 		String memberUuid = blankToNull(query.getMemberUuid());
-		String keyword = blankToNull(query.getKeyword());
+		String keyword = SearchTermNormalizer.normalize(
+				query.getKeyword(),
+				searchProperties.keywordMaxLength()
+		);
 
 		ProductPostCardPageProjection projection = productPostLoadPort.findCards(
 				ProductPostListCriteria.builder()
@@ -87,6 +96,10 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 						.size(size)
 						.build()
 		);
+
+		if (keyword != null) {
+			searchTermRecordingService.recordAsync(keyword);
+		}
 
 		List<ProductPostCardDto> content = projection.getContent().stream()
 				.map(card -> ProductPostCardDto.builder()

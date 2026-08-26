@@ -3,6 +3,8 @@ package com.sparta.product_post_service.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -10,6 +12,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -23,6 +26,7 @@ import com.sparta.product_post_service.application.port.out.ProductPostLoadPort;
 import com.sparta.product_post_service.application.port.out.dto.ProductPostCardPageProjection;
 import com.sparta.product_post_service.application.port.out.dto.ProductPostCardProjection;
 import com.sparta.product_post_service.application.port.out.dto.ProductPostListCriteria;
+import com.sparta.product_post_service.config.SearchProperties;
 import com.sparta.product_post_service.domain.model.ProductPostStatus;
 import com.sparta.product_post_service.domain.model.TradeStatus;
 
@@ -32,8 +36,19 @@ class ProductPostQueryServiceListTest {
 	@Mock
 	private ProductPostLoadPort productPostLoadPort;
 
+	@Mock
+	private SearchTermRecordingService searchTermRecordingService;
+
+	@Mock
+	private SearchProperties searchProperties;
+
 	@InjectMocks
 	private ProductPostQueryService productPostQueryService;
+
+	@BeforeEach
+	void setUp() {
+		lenient().when(searchProperties.keywordMaxLength()).thenReturn(50);
+	}
 
 	@Test
 	void list_withoutTradeStatus_passesAllVisibleStatuses() {
@@ -49,6 +64,18 @@ class ProductPostQueryServiceListTest {
 								.filter(TradeStatus::isListVisible)
 								.toList()
 				);
+		verify(searchTermRecordingService, never()).recordAsync(any());
+	}
+
+	@Test
+	void list_withKeyword_normalizesAndRecordsAsync() {
+		stubEmptyPage();
+
+		productPostQueryService.list(baseQuery(null).keyword("  샤넬  백  ").build());
+
+		ProductPostListCriteria criteria = captureCriteria();
+		assertThat(criteria.getKeyword()).isEqualTo("샤넬 백");
+		verify(searchTermRecordingService).recordAsync("샤넬 백");
 	}
 
 	@Test
@@ -92,7 +119,7 @@ class ProductPostQueryServiceListTest {
 						.build()
 		);
 
-		ProductPostCardPageDto result = productPostQueryService.list(baseQuery(null).build());
+		ProductPostCardPageDto result = productPostQueryService.list(baseQuery("SELLING").build());
 
 		assertThat(result.getContent()).hasSize(1);
 		assertThat(result.getContent().get(0).getRegionDong()).isEqualTo("초량동");
