@@ -252,6 +252,11 @@ public class ProductPost {
 		this.tradeStatus = targetStatus;
 	}
 
+	// 거래상태만 바뀐 시각 (이미지·서류 갱신 없이)
+	public void markUpdated(Instant updatedAt) {
+		this.updatedAt = Objects.requireNonNull(updatedAt, "수정 시각은 필수입니다.");
+	}
+
 	// 허용 전이: SELLING↔RESERVED, RESERVED→SOLD_OUT, SELLING→SOLD_OUT
 	private boolean canTransitionTradeStatusTo(TradeStatus targetStatus) {
 		if (tradeStatus == TradeStatus.SOLD_OUT) {

@@ -5,10 +5,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
+import com.sparta.product_post_service.config.ProductPostKafkaProperties;
 import com.sparta.product_post_service.config.ProductPostPolicyProperties;
 
 @EnableDiscoveryClient
-@EnableConfigurationProperties(ProductPostPolicyProperties.class)
+@EnableConfigurationProperties({ProductPostPolicyProperties.class, ProductPostKafkaProperties.class})
 @SpringBootApplication
 public class ProductPostServiceApplication {
 

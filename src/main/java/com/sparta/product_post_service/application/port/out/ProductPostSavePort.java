@@ -10,4 +10,7 @@ public interface ProductPostSavePort {
 
 	// 기존 판매글 변경 저장 (이미지·서류 포함)
 	ProductPost update(ProductPost listing);
+
+	// 거래 상태·수정시각만 갱신 (이미지·서류 미터치)
+	void updateTradeStatus(ProductPost listing);
 }

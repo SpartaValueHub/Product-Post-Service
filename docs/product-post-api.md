@@ -469,7 +469,7 @@ Body 없음.
 - `HIDDEN`·`PUBLIC` 모두 가능
 - 이미 같은 `tradeStatus`여도 `200 OK` (멱등)
 
-Reservation 서비스 연동(예약 확정 시 자동 `RESERVED`)은 후속 작업. 본 API는 FO 판매자 수동 변경용.
+본 API는 FO 판매자 수동 변경용. 예약 등록 시 자동 `RESERVED`는 Kafka `reservation.events`(`CREATED`) 컨슈머가 처리한다. 상세는 `docs/reservation-events.md`.
 
 ### Response
 `200 OK`

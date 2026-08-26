@@ -71,6 +71,13 @@ product-post:
       빈티지 백:
         - 빈티지 샤넬
         - 빈티지 에르메스
+  kafka:
+    # local profile은 false. dev/prod는 true
+    enabled: ${PRODUCT_POST_KAFKA_ENABLED:true}
+    reservation-events-topic: ${PRODUCT_POST_KAFKA_RESERVATION_EVENTS_TOPIC:reservation.events}
+    # eventType → TradeStatus. 추가 타입은 설정만 확장
+    event-type-trade-status:
+      CREATED: RESERVED
 
 spring:
   application:
@@ -90,6 +97,16 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: listing-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      enable-auto-commit: true
+    listener:
+      concurrency: ${PRODUCT_POST_KAFKA_LISTENER_CONCURRENCY:3}
 
 # 이미지 Presigned 업로드 (EC2 Instance Role — Access Key 불필요)
 app:
