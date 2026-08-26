@@ -72,6 +72,14 @@ public record SearchProperties(
 		String sessionAnonymousPrefix,
 		// 세션 직전 검색어 TTL (ms)
 		long sessionLastTtlMs,
+		// 자동완성 최소 prefix 길이 (정규화 후 글자 수)
+		int suggestionsMinLength,
+		// 자동완성 Redis 사전 키 (lex ZSET)
+		String suggestionsDictKey,
+		// 자동완성 사전 최대 멤버 수 (베이크 상한)
+		int suggestionsDictLimit,
+		// 자동완성 사전 베이크 분산 락 키
+		String suggestionsBakeLockKey,
 		// Redis 서빙 비어 있을 때 추천 시드
 		List<String> popularSeed,
 		// 정규화 전 원문 키 → 연관 검색어 (서비스에서 정규화 키로 조회)
@@ -173,6 +181,18 @@ public record SearchProperties(
 		}
 		if (sessionLastTtlMs <= 0) {
 			sessionLastTtlMs = 1_800_000L;
+		}
+		if (suggestionsMinLength <= 0) {
+			suggestionsMinLength = 2;
+		}
+		if (suggestionsDictKey == null || suggestionsDictKey.isBlank()) {
+			suggestionsDictKey = "search:suggest:dict";
+		}
+		if (suggestionsDictLimit <= 0) {
+			suggestionsDictLimit = 2000;
+		}
+		if (suggestionsBakeLockKey == null || suggestionsBakeLockKey.isBlank()) {
+			suggestionsBakeLockKey = "search:suggest:bake-lock";
 		}
 		popularSeed = popularSeed == null ? List.of() : List.copyOf(popularSeed);
 		related = related == null ? Map.of() : Map.copyOf(related);

@@ -9,8 +9,8 @@ Product-Post-Service 헤더 검색어 API 명세서입니다.
 | 항목 | 내용 |
 |------|------|
 | Auth | 불필요 (FO 비로그인 허용). Gateway GET public |
-| 원본 DB | 추천·연관 API는 판매글 테이블을 조회하지 않음 |
-| Redis 장애 | 추천은 YAML 시드 fallback. 연관은 사전 후 popular fallback. 목록 검색은 DB로 정상 |
+| 원본 DB | 추천·연관·자동완성 API는 판매글 테이블을 조회하지 않음 |
+| Redis 장애 | 추천은 YAML 시드 fallback. 연관은 사전 후 popular fallback. 자동완성은 seed·related prefix fallback. 목록 검색은 DB로 정상 |
 
 공통 응답:
 
@@ -106,6 +106,49 @@ Product-Post-Service 헤더 검색어 API 명세서입니다.
 
 ### Errors
 없음 (blank `q` → `terms: []`)
+
+---
+
+## GET /api/v1/search/suggestions
+
+### Summary
+타이핑 중 검색어 자동완성(prefix) 후보를 반환한다.
+
+### Method · Path
+`GET /api/v1/search/suggestions`
+
+### Auth
+불필요 (Gateway `/*/api/v1/search/**` public)
+
+### Request
+
+| 위치 | 필드 | 타입 | 필수 | 제약 |
+|------|------|------|------|------|
+| Query | q | string | Y | 검색어 prefix. blank·최소 길이 미만이면 빈 배열 |
+
+### Response
+`200 OK`
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| terms | string[] | 정규화 prefix로 시작하는 후보. 최대 `popular-limit`(기본 **5**). Redis lex 사전(`suggestions-dict-key`) → 없으면 YAML seed·related fallback |
+
+
+```json
+{
+  "terms": ["롤렉스", "롤렉스 서브마리너"]
+}
+```
+
+### 서빙 방식
+
+- 판매글 DB 조회 없음
+- `@Scheduled`가 최근 7일 상위 검색어 + seed/related로 `search:suggest:dict`(ZSET, score=0) 베이크
+- API는 `ZRANGEBYLEX` prefix 조회. 비면 YAML 후보 prefix 필터
+- 최소 길이: `suggestions-min-length`(기본 **2**, 정규화 후 글자 수)
+
+### Errors
+없음 (blank/`min-length` 미만 → `terms: []`)
 
 ---
 
