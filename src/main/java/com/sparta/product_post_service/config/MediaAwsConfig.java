@@ -8,7 +8,10 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
+import lombok.extern.slf4j.Slf4j;
+
 // S3 Presigner — EC2 Instance Role / 로컬 DefaultCredentialsProvider
+@Slf4j
 @Configuration
 @EnableConfigurationProperties(MediaProperties.class)
 public class MediaAwsConfig {
@@ -18,6 +21,10 @@ public class MediaAwsConfig {
 		String region = mediaProperties.awsRegion() == null || mediaProperties.awsRegion().isBlank()
 				? "ap-northeast-2"
 				: mediaProperties.awsRegion();
+		log.info(
+				"app.media.extension-by-content-type loaded keys={}",
+				mediaProperties.resolvedExtensionByContentType().keySet()
+		);
 		return S3Presigner.builder()
 				.region(Region.of(region))
 				.credentialsProvider(DefaultCredentialsProvider.create())

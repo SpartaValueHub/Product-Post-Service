@@ -28,6 +28,14 @@ public record MediaProperties(
 		List<String> passthroughUrls
 ) {
 
+	// yaml 미바인딩·empty map 대비 기본 허용 Content-Type
+	public static final Map<String, String> DEFAULT_EXTENSION_BY_CONTENT_TYPE = Map.of(
+			"image/jpeg", "jpg",
+			"image/png", "png",
+			"image/webp", "webp",
+			"image/gif", "gif"
+	);
+
 	public MediaProperties {
 		if (pendingPrefix == null || pendingPrefix.isBlank()) {
 			pendingPrefix = "pending/";
@@ -36,12 +44,7 @@ public record MediaProperties(
 			confirmedPrefix = "posts/";
 		}
 		if (extensionByContentType == null || extensionByContentType.isEmpty()) {
-			extensionByContentType = Map.of(
-					"image/jpeg", "jpg",
-					"image/png", "png",
-					"image/webp", "webp",
-					"image/gif", "gif"
-			);
+			extensionByContentType = DEFAULT_EXTENSION_BY_CONTENT_TYPE;
 		} else {
 			extensionByContentType = Map.copyOf(extensionByContentType);
 		}
@@ -50,5 +53,13 @@ public record MediaProperties(
 		} else {
 			passthroughUrls = List.copyOf(passthroughUrls);
 		}
+	}
+
+	// empty map이면 jpeg/png/webp/gif 기본값을 쓴다
+	public Map<String, String> resolvedExtensionByContentType() {
+		if (extensionByContentType == null || extensionByContentType.isEmpty()) {
+			return DEFAULT_EXTENSION_BY_CONTENT_TYPE;
+		}
+		return extensionByContentType;
 	}
 }

@@ -92,6 +92,39 @@ class IssuePresignedUploadServiceTest {
 	}
 
 	@Test
+	void issuePresignedUpload_acceptsJpegWhenExtensionMapEmpty() {
+		MediaProperties emptyMapProperties = new MediaProperties(
+				"valuehub-media-test",
+				"https://dxxxx.cloudfront.net",
+				"ap-northeast-2",
+				5_242_880L,
+				300,
+				"pending/",
+				"posts/",
+				java.util.Map.of(),
+				java.util.List.of()
+		);
+		IssuePresignedUploadService emptyMapService = new IssuePresignedUploadService(
+				presignObjectPutPort,
+				new MediaObjectKeyPolicy(emptyMapProperties),
+				emptyMapProperties
+		);
+		when(presignObjectPutPort.createPutUrl(anyString(), eq("image/jpeg"), eq(12345L), eq(300)))
+				.thenReturn("https://s3.example/upload");
+
+		IssuePresignedUploadResultDto result = emptyMapService.issuePresignedUpload(
+				IssuePresignedUploadCommand.builder()
+						.memberUuid(MEMBER_UUID)
+						.contentType("image/jpeg")
+						.contentLength(12345L)
+						.build()
+		);
+
+		assertThat(result.getS3Key()).startsWith("pending/posts/" + MEMBER_UUID + "/");
+		assertThat(result.getS3Key()).endsWith(".jpg");
+	}
+
+	@Test
 	void issuePresignedUpload_rejectsTooLargeContentLength() {
 		assertThatThrownBy(() -> service.issuePresignedUpload(
 				IssuePresignedUploadCommand.builder()

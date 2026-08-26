@@ -102,13 +102,19 @@ public class MediaObjectKeyPolicy {
 		if (contentType == null || contentType.isBlank()) {
 			throw new MediaInvalidRequestException("INVALID_CONTENT_TYPE", "허용되지 않는 Content-Type입니다.");
 		}
-		return contentType.trim().toLowerCase(Locale.ROOT);
+		String normalized = contentType.trim().toLowerCase(Locale.ROOT);
+		int separator = normalized.indexOf(';');
+		if (separator >= 0) {
+			normalized = normalized.substring(0, separator).trim();
+		}
+		return normalized;
 	}
 
-	private Map<String, String> extensionByContentType() {
-		Map<String, String> configured = mediaProperties.extensionByContentType();
+	// empty map이면 jpeg/png/webp/gif 기본값을 쓴다
+	Map<String, String> extensionByContentType() {
+		Map<String, String> configured = mediaProperties.resolvedExtensionByContentType();
 		if (configured == null || configured.isEmpty()) {
-			throw new MediaInvalidRequestException("INVALID_CONTENT_TYPE", "허용되지 않는 Content-Type입니다.");
+			return MediaProperties.DEFAULT_EXTENSION_BY_CONTENT_TYPE;
 		}
 		return configured;
 	}

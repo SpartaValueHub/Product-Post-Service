@@ -12,7 +12,9 @@ import com.sparta.product_post_service.application.port.out.PresignObjectPutPort
 import com.sparta.product_post_service.config.MediaProperties;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class IssuePresignedUploadService implements IssuePresignedUploadUseCase {
@@ -26,6 +28,12 @@ public class IssuePresignedUploadService implements IssuePresignedUploadUseCase 
 
 	@Override
 	public IssuePresignedUploadResultDto issuePresignedUpload(IssuePresignedUploadCommand command) {
+		log.info(
+				"Presign 요청 수신 contentType={} contentLength={} allowedTypes={}",
+				command.getContentType(),
+				command.getContentLength(),
+				mediaObjectKeyPolicy.extensionByContentType().keySet()
+		);
 		String memberUuid = requireMemberUuid(command.getMemberUuid());
 		String contentType = mediaObjectKeyPolicy.requireContentType(command.getContentType());
 		long contentLength = requireContentLength(command.getContentLength());
