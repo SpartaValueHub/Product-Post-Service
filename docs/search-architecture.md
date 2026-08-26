@@ -248,7 +248,9 @@ Category가 필요하면 Product-Post가 Category를 **조회·참고**할 뿐, 
 
 | 키 | 용도 |
 |----|------|
-| `search:terms:z` | 검색어 점수 ZSET (`ZINCRBY` / `ZREVRANGE`) |
+| `search:terms:z` | 검색어 점수 ZSET (`ZINCRBY` — 기록 전용) |
+| `search:popular` | 추천 TopN 서빙 LIST (`@Scheduled` 베이크 스냅샷) |
+| `search:popular:bake-lock` | 다중 인스턴스 베이크 분산 락 |
 
 연관 1차는 YAML 사전 서빙(요청 시 원본 DB·무거운 집계 없음). Redis 연관 맵 캐시는 후속 가능.
 
@@ -259,8 +261,17 @@ Category가 필요하면 Product-Post가 Category를 **조회·참고**할 뿐, 
 1. **검색 로그(비동기)** + **추천 검색어 API** (`/search/popular`) — 완료
 2. **연관 검색어 API** (`/search/related`) — 1차는 YAML 사전, 이후 동시검색 — 완료
 3. **일반 검색 연결** — keyword 정규화 + 비동기 Redis 카운터 — 완료
-4. **일반 검색 쿼리 개선** — `LIKE %…%` → MySQL FULLTEXT(ngram, 제목만) — 이번 이슈
-5. (선택) 자동완성 `suggestions`, 최근 검색어(유저별 Redis)
+4. **일반 검색 쿼리 개선** — `LIKE %…%` → MySQL FULLTEXT(ngram, 제목만) — 완료
+5. **추천 TopN 주기 베이크** — `@Scheduled` → `search:popular` 서빙 분리 — 이번 이슈
+6. (선택) 자동완성 `suggestions`, 최근 검색어(유저별 Redis)
+
+### 추천 TopN 베이크 요약
+
+- 기술: `@Scheduled` (Spring Batch 프레임워크 아님). 주기·키·최소점수는 YAML
+- 기본: `popular-limit=5`, `bake-interval-ms=3600000`(60분)
+- Enter → `ZINCRBY terms-zset` / 스케줄 → TopN → `popular-serving-key` LIST
+- API는 서빙 LIST만 읽음. 비면 YAML seed
+- 다중 인스턴스: Redis `SET NX` 락
 
 ### FULLTEXT(ngram) 적용 요약
 
@@ -273,7 +284,7 @@ Category가 필요하면 Product-Post가 Category를 **조회·참고**할 뿐, 
 
 ### 아직 미룬 것
 
-- 배치 TopN·가중 점수, 동시검색 연관, Category HTTP 연동
+- 가중 점수(24h/7d/클릭), 금칙어 필터, 동시검색 연관, Category HTTP 연동
 - 자동완성·최근 검색어·운영 pin Admin
 - 제목+본문 FULLTEXT, 리드 레플리카
 

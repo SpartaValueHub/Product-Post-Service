@@ -31,10 +31,16 @@ class SearchQueryServiceTest {
 	@BeforeEach
 	void setUp() {
 		SearchProperties properties = new SearchProperties(
-				10,
+				5,
 				50,
 				2,
 				"search:terms:z",
+				"search:popular",
+				3_600_000L,
+				60_000L,
+				1.0d,
+				"search:popular:bake-lock",
+				300_000L,
 				List.of("롤렉스", "샤넬백", "빈티지 백"),
 				Map.of(
 						"샤넬백", List.of("샤넬백 보증서", "샤넬 클래식"),
@@ -50,7 +56,7 @@ class SearchQueryServiceTest {
 
 	@Test
 	void getPopular_whenRedisEmpty_returnsSeed() {
-		when(loadPopularSearchTermsPort.loadPopular(10)).thenReturn(List.of());
+		when(loadPopularSearchTermsPort.loadPopular(5)).thenReturn(List.of());
 
 		List<String> terms = searchQueryService.getPopular();
 
@@ -59,7 +65,7 @@ class SearchQueryServiceTest {
 
 	@Test
 	void getPopular_whenRedisHasTerms_returnsRedisTop() {
-		when(loadPopularSearchTermsPort.loadPopular(10)).thenReturn(List.of("오메가", "에르메스"));
+		when(loadPopularSearchTermsPort.loadPopular(5)).thenReturn(List.of("오메가", "에르메스"));
 
 		List<String> terms = searchQueryService.getPopular();
 
@@ -80,7 +86,7 @@ class SearchQueryServiceTest {
 	@Test
 	void getRelated_whenDictionaryEmpty_fallsBackToPopular() {
 		when(loadRelatedSearchTermsPort.loadRelated("없는검색어")).thenReturn(List.of());
-		when(loadPopularSearchTermsPort.loadPopular(10)).thenReturn(List.of("롤렉스", "샤넬백"));
+		when(loadPopularSearchTermsPort.loadPopular(5)).thenReturn(List.of("롤렉스", "샤넬백"));
 
 		List<String> terms = searchQueryService.getRelated("없는검색어");
 

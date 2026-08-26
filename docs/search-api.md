@@ -41,13 +41,20 @@ Product-Post-Service 헤더 검색어 API 명세서입니다.
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| terms | string[] | 최대 `product-post.search.popular-limit`(기본 10). Redis ZSET 점수 내림차순. 비어 있으면 YAML `popular-seed` |
+| terms | string[] | 최대 `product-post.search.popular-limit`(기본 **5**). 스케줄이 구운 Redis LIST(`popular-serving-key`) 순. 비어 있으면 YAML `popular-seed` |
+
 
 ```json
 {
   "terms": ["롤렉스", "샤넬백", "빈티지 백"]
 }
 ```
+
+### 서빙 방식
+
+- Enter 검색 → 비동기 `ZINCRBY` (`terms-zset-key`)
+- `@Scheduled` (기본 60분)가 TopN을 `popular-serving-key` LIST에 스냅샷
+- 이 API는 스냅샷만 조회. 비어 있으면 `popular-seed`
 
 ### Errors
 없음 (장애 시 시드 또는 빈 배열)
