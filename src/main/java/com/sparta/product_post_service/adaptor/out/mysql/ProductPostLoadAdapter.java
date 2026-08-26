@@ -66,21 +66,45 @@ public class ProductPostLoadAdapter implements ProductPostLoadPort {
 		String memberUuid = blankToNull(criteria.getMemberUuid());
 		String keyword = blankToNull(criteria.getKeyword());
 
-		Page<ProductPostEntity> page = productPostJpaRepository.searchForList(
-				criteria.getProductPostStatus(),
-				criteria.getTradeStatuses(),
-				hasCategories,
-				hasCategories ? criteria.getCategoryUuids() : UNUSED_STRINGS,
-				memberUuid,
-				keyword,
-				criteria.getMinPrice(),
-				criteria.getMaxPrice(),
-				hasGrades,
-				hasGrades ? criteria.getConditionGrades() : UNUSED_STRINGS,
-				hasDocumentTypes,
-				hasDocumentTypes ? criteria.getDocumentTypes() : UNUSED_DOCUMENT_TYPES,
-				PageRequest.of(criteria.getPage(), criteria.getSize())
-		);
+		PageRequest pageable = PageRequest.of(criteria.getPage(), criteria.getSize());
+		List<String> categoryUuids = hasCategories ? criteria.getCategoryUuids() : UNUSED_STRINGS;
+		List<String> conditionGrades = hasGrades ? criteria.getConditionGrades() : UNUSED_STRINGS;
+		List<DocumentType> documentTypes = hasDocumentTypes ? criteria.getDocumentTypes() : UNUSED_DOCUMENT_TYPES;
+		List<String> documentTypeNames = documentTypes.stream().map(Enum::name).toList();
+
+		Page<ProductPostEntity> page;
+		if (keyword == null) {
+			page = productPostJpaRepository.searchForList(
+					criteria.getProductPostStatus(),
+					criteria.getTradeStatuses(),
+					hasCategories,
+					categoryUuids,
+					memberUuid,
+					criteria.getMinPrice(),
+					criteria.getMaxPrice(),
+					hasGrades,
+					conditionGrades,
+					hasDocumentTypes,
+					documentTypes,
+					pageable
+			);
+		} else {
+			page = productPostJpaRepository.searchForListByKeyword(
+					criteria.getProductPostStatus().name(),
+					criteria.getTradeStatuses().stream().map(Enum::name).toList(),
+					hasCategories,
+					categoryUuids,
+					memberUuid,
+					keyword,
+					criteria.getMinPrice(),
+					criteria.getMaxPrice(),
+					hasGrades,
+					conditionGrades,
+					hasDocumentTypes,
+					documentTypeNames,
+					pageable
+			);
+		}
 
 		Map<Long, String> thumbnails = loadThumbnailUrls(page.getContent());
 		List<ProductPostCardProjection> content = page.getContent().stream()

@@ -619,7 +619,7 @@ Body 없음.
 | categoryUuids | string[] | N | 리프 카테고리 UUID. 없으면 전체(All). Luxury「전체상품」은 FE가 하위 리프 UUID를 모두 전달 |
 | memberUuid | string | N | 판매자(회원) UUID. 해당 회원의 PUBLIC 글만. 마이페이지·프로필 「판매중인 물품」용. blank면 미적용 |
 | tradeStatus | string | N | `SELLING`/`RESERVED`/`SOLD_OUT`. 미전달 시 세 상태 전체. `memberUuid` 없이도 홈 피드 필터로 사용 가능 |
-| keyword | string | N | 상품명 부분 일치. 빈 값이면 미적용 |
+| keyword | string | N | 상품명 FULLTEXT(ngram) 검색. 빈 값이면 미적용. **2글자 미만**이면 결과 없음 |
 | minPrice | number | N | 0 이상. maxPrice보다 클 수 없음 |
 | maxPrice | number | N | 0 이상 |
 | conditionGrades | string[] | N | `S`/`A`/`B`/`C`. 없으면 전체 |

@@ -33,6 +33,7 @@ class SearchQueryServiceTest {
 		SearchProperties properties = new SearchProperties(
 				10,
 				50,
+				2,
 				"search:terms:z",
 				List.of("롤렉스", "샤넬백", "빈티지 백"),
 				Map.of(

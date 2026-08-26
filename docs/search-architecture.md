@@ -27,10 +27,16 @@ Elasticsearch는 좋은 검색 엔진이지 유일한 해법이 아니다.
 
 ## 2. 왜 MySQL만으로 헤더 검색을 하면 터지나
 
-현재 목록 검색(개념):
+현재 목록 검색(개념, 개선 전):
 
 ```text
 WHERE product_post_name LIKE '%빈티지%'
+```
+
+개선 후(제목 FULLTEXT ngram):
+
+```text
+WHERE MATCH(product_post_name) AGAINST ('빈티지' IN NATURAL LANGUAGE MODE)
 ```
 
 - 앞쪽 `%` → 인덱스 사용 불가 → 데이터 증가 시 풀스캔에 가까워짐
@@ -250,17 +256,26 @@ Category가 필요하면 Product-Post가 Category를 **조회·참고**할 뿐, 
 
 ## 9. 구현 순서 (합의안)
 
-1. **검색 로그(비동기)** + **추천 검색어 API** (`/search/popular`) — 1차 구현
-2. **연관 검색어 API** (`/search/related`) — 1차는 YAML 사전, 이후 동시검색
-3. **일반 검색 연결** — keyword 정규화 + 비동기 Redis 카운터 (목록 API 유지)
-4. **(다음 이슈)** 일반 검색 쿼리 개선 — `LIKE %…%` → MySQL FULLTEXT(ngram) 등
+1. **검색 로그(비동기)** + **추천 검색어 API** (`/search/popular`) — 완료
+2. **연관 검색어 API** (`/search/related`) — 1차는 YAML 사전, 이후 동시검색 — 완료
+3. **일반 검색 연결** — keyword 정규화 + 비동기 Redis 카운터 — 완료
+4. **일반 검색 쿼리 개선** — `LIKE %…%` → MySQL FULLTEXT(ngram, 제목만) — 이번 이슈
 5. (선택) 자동완성 `suggestions`, 최근 검색어(유저별 Redis)
 
-### 1차에서 명시적으로 미룬 것
+### FULLTEXT(ngram) 적용 요약
 
-- LIKE → FULLTEXT/ngram (한글·운영 리스크)
-- 동시검색 배치 연관, Category HTTP 연동
+- 대상: `product_post.product_post_name` 만
+- 인덱스: `ft_pp_name_ngram` (`scripts/add-product-post-name-fulltext.sql`, ddl-auto로는 생성 안 됨)
+- 모드: `NATURAL LANGUAGE MODE`
+- keyword 없음 → 기존 JPQL 목록 / keyword 있음 → native `MATCH`
+- 2글자 미만 → LIKE 폴백 없이 빈 결과 (ngram_token_size=2)
+- 최소 길이는 `product-post.search.fulltext-min-keyword-length` 설정 (하드코딩 금지)
+
+### 아직 미룬 것
+
+- 배치 TopN·가중 점수, 동시검색 연관, Category HTTP 연동
 - 자동완성·최근 검색어·운영 pin Admin
+- 제목+본문 FULLTEXT, 리드 레플리카
 
 
 ---

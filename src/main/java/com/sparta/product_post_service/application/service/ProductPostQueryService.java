@@ -81,6 +81,12 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 				searchProperties.keywordMaxLength()
 		);
 
+		// ngram 최소 길이 미만은 FULLTEXT 매칭 불가 — DB 조회 없이 빈 목록 (카운터는 기록)
+		if (keyword != null && keyword.length() < searchProperties.fulltextMinKeywordLength()) {
+			searchTermRecordingService.recordAsync(keyword);
+			return emptyCardPage(page, size);
+		}
+
 		ProductPostCardPageProjection projection = productPostLoadPort.findCards(
 				ProductPostListCriteria.builder()
 						.productPostStatus(ProductPostStatus.PUBLIC)
@@ -124,6 +130,17 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 				.size(size)
 				.totalElements(totalElements)
 				.totalPages(totalPages)
+				.build();
+	}
+
+	// FULLTEXT 최소 길이 미달 시 빈 페이지
+	private ProductPostCardPageDto emptyCardPage(int page, int size) {
+		return ProductPostCardPageDto.builder()
+				.content(List.of())
+				.page(page)
+				.size(size)
+				.totalElements(0L)
+				.totalPages(0)
 				.build();
 	}
 

@@ -92,6 +92,18 @@ Auth / Gateway와 **동일 Redis**를 사용합니다. Product-Post에 Redis 컨
 | `REDIS_HOST` | Redis 호스트 | `127.0.0.1` |
 | `REDIS_PORT` | Redis 포트 | `6379` |
 
+## 수동 SQL 스크립트 (`scripts/`)
+
+Hibernate `ddl-auto=update` 로 안 잡히거나 prod `validate` 전에 필요한 인덱스·컬럼:
+
+| 파일 | 용도 |
+|------|------|
+| `add-product-post-list-indexes.sql` | 목록 복합 인덱스 |
+| `add-product-post-region-labels.sql` | 동·구 컬럼 |
+| `add-product-post-name-fulltext.sql` | 제목 FULLTEXT(ngram) — keyword 검색 |
+
+keyword 검색 배포 전 **반드시** `add-product-post-name-fulltext.sql` 을 `product_post_db`에 적용한다.
+
 ## 필수 환경변수 (local)
 
 | 변수 | 설명 |

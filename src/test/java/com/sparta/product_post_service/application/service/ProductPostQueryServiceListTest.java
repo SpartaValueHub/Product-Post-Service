@@ -48,6 +48,7 @@ class ProductPostQueryServiceListTest {
 	@BeforeEach
 	void setUp() {
 		lenient().when(searchProperties.keywordMaxLength()).thenReturn(50);
+		lenient().when(searchProperties.fulltextMinKeywordLength()).thenReturn(2);
 	}
 
 	@Test
@@ -76,6 +77,16 @@ class ProductPostQueryServiceListTest {
 		ProductPostListCriteria criteria = captureCriteria();
 		assertThat(criteria.getKeyword()).isEqualTo("샤넬 백");
 		verify(searchTermRecordingService).recordAsync("샤넬 백");
+	}
+
+	@Test
+	void list_withShortKeyword_returnsEmptyWithoutDbLookup() {
+		ProductPostCardPageDto result = productPostQueryService.list(baseQuery(null).keyword("롤").build());
+
+		assertThat(result.getContent()).isEmpty();
+		assertThat(result.getTotalElements()).isZero();
+		verify(productPostLoadPort, never()).findCards(any());
+		verify(searchTermRecordingService).recordAsync("롤");
 	}
 
 	@Test
