@@ -269,6 +269,7 @@ Category가 필요하면 Product-Post가 Category를 **조회·참고**할 뿐, 
 - 모드: `NATURAL LANGUAGE MODE`
 - keyword 없음 → 기존 JPQL 목록 / keyword 있음 → native `MATCH`
 - 2글자 미만 → LIKE 폴백 없이 빈 결과 (ngram_token_size=2)
+- 최소 길이는 `product-post.search.fulltext-min-keyword-length` 설정 (하드코딩 금지)
 
 ### 아직 미룬 것
 

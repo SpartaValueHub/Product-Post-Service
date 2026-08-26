@@ -35,8 +35,6 @@ public class ProductPostLoadAdapter implements ProductPostLoadPort {
 	private static final List<String> UNUSED_STRINGS = List.of("__unused__");
 	// 서류 IN 절 placeholder
 	private static final List<DocumentType> UNUSED_DOCUMENT_TYPES = List.of(DocumentType.WARRANTY);
-	// MySQL ngram_token_size 기본 2 — 미만은 FULLTEXT 매칭 불가, LIKE 폴백 없이 빈 결과
-	private static final int FULLTEXT_MIN_KEYWORD_LENGTH = 2;
 
 	// 판매글 JPA Repository
 	private final ProductPostJpaRepository productPostJpaRepository;
@@ -68,13 +66,11 @@ public class ProductPostLoadAdapter implements ProductPostLoadPort {
 		String memberUuid = blankToNull(criteria.getMemberUuid());
 		String keyword = blankToNull(criteria.getKeyword());
 
-		if (keyword != null && keyword.length() < FULLTEXT_MIN_KEYWORD_LENGTH) {
-			return emptyCardPage(criteria);
-		}
-
 		PageRequest pageable = PageRequest.of(criteria.getPage(), criteria.getSize());
 		List<String> categoryUuids = hasCategories ? criteria.getCategoryUuids() : UNUSED_STRINGS;
 		List<String> conditionGrades = hasGrades ? criteria.getConditionGrades() : UNUSED_STRINGS;
+		List<DocumentType> documentTypes = hasDocumentTypes ? criteria.getDocumentTypes() : UNUSED_DOCUMENT_TYPES;
+		List<String> documentTypeNames = documentTypes.stream().map(Enum::name).toList();
 
 		Page<ProductPostEntity> page;
 		if (keyword == null) {
@@ -89,7 +85,7 @@ public class ProductPostLoadAdapter implements ProductPostLoadPort {
 					hasGrades,
 					conditionGrades,
 					hasDocumentTypes,
-					hasDocumentTypes ? criteria.getDocumentTypes() : UNUSED_DOCUMENT_TYPES,
+					documentTypes,
 					pageable
 			);
 		} else {
@@ -105,9 +101,7 @@ public class ProductPostLoadAdapter implements ProductPostLoadPort {
 					hasGrades,
 					conditionGrades,
 					hasDocumentTypes,
-					hasDocumentTypes
-							? criteria.getDocumentTypes().stream().map(Enum::name).toList()
-							: List.of(DocumentType.WARRANTY.name()),
+					documentTypeNames,
 					pageable
 			);
 		}
@@ -120,16 +114,6 @@ public class ProductPostLoadAdapter implements ProductPostLoadPort {
 		return ProductPostCardPageProjection.builder()
 				.content(content)
 				.totalElements(page.getTotalElements())
-				.page(criteria.getPage())
-				.size(criteria.getSize())
-				.build();
-	}
-
-	// keyword가 ngram 최소 길이 미만일 때 빈 페이지
-	private ProductPostCardPageProjection emptyCardPage(ProductPostListCriteria criteria) {
-		return ProductPostCardPageProjection.builder()
-				.content(List.of())
-				.totalElements(0L)
 				.page(criteria.getPage())
 				.size(criteria.getSize())
 				.build();

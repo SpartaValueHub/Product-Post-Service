@@ -12,6 +12,8 @@ public record SearchProperties(
 		int popularLimit,
 		// 검색어 최대 길이 (정규화 후 truncate)
 		int keywordMaxLength,
+		// FULLTEXT(ngram) 최소 검색어 길이 (미만이면 목록 빈 결과)
+		int fulltextMinKeywordLength,
 		// 검색어 점수 ZSET 키
 		String termsZsetKey,
 		// Redis 비어 있을 때 추천 시드
@@ -25,6 +27,9 @@ public record SearchProperties(
 		}
 		if (keywordMaxLength <= 0) {
 			keywordMaxLength = 50;
+		}
+		if (fulltextMinKeywordLength <= 0) {
+			fulltextMinKeywordLength = 2;
 		}
 		if (termsZsetKey == null || termsZsetKey.isBlank()) {
 			termsZsetKey = "search:terms:z";
