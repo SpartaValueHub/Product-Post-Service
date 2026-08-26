@@ -3,6 +3,9 @@ package com.sparta.product_post_service.application.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -26,6 +29,7 @@ import com.sparta.product_post_service.application.port.out.ProductPostLoadPort;
 import com.sparta.product_post_service.application.port.out.dto.ProductPostCardPageProjection;
 import com.sparta.product_post_service.application.port.out.dto.ProductPostCardProjection;
 import com.sparta.product_post_service.application.port.out.dto.ProductPostListCriteria;
+import com.sparta.product_post_service.application.support.SearchSessionKeyResolver;
 import com.sparta.product_post_service.config.SearchProperties;
 import com.sparta.product_post_service.domain.model.ProductPostStatus;
 import com.sparta.product_post_service.domain.model.TradeStatus;
@@ -40,6 +44,9 @@ class ProductPostQueryServiceListTest {
 	private SearchTermRecordingService searchTermRecordingService;
 
 	@Mock
+	private SearchSessionKeyResolver searchSessionKeyResolver;
+
+	@Mock
 	private SearchProperties searchProperties;
 
 	@InjectMocks
@@ -49,6 +56,7 @@ class ProductPostQueryServiceListTest {
 	void setUp() {
 		lenient().when(searchProperties.keywordMaxLength()).thenReturn(50);
 		lenient().when(searchProperties.fulltextMinKeywordLength()).thenReturn(2);
+		lenient().when(searchSessionKeyResolver.resolve(any(), any())).thenReturn(null);
 	}
 
 	@Test
@@ -65,7 +73,7 @@ class ProductPostQueryServiceListTest {
 								.filter(TradeStatus::isListVisible)
 								.toList()
 				);
-		verify(searchTermRecordingService, never()).recordAsync(any());
+		verify(searchTermRecordingService, never()).recordAsync(anyString(), any());
 	}
 
 	@Test
@@ -76,7 +84,7 @@ class ProductPostQueryServiceListTest {
 
 		ProductPostListCriteria criteria = captureCriteria();
 		assertThat(criteria.getKeyword()).isEqualTo("샤넬 백");
-		verify(searchTermRecordingService).recordAsync("샤넬 백");
+		verify(searchTermRecordingService).recordAsync(eq("샤넬 백"), isNull());
 	}
 
 	@Test
@@ -86,7 +94,7 @@ class ProductPostQueryServiceListTest {
 		assertThat(result.getContent()).isEmpty();
 		assertThat(result.getTotalElements()).isZero();
 		verify(productPostLoadPort, never()).findCards(any());
-		verify(searchTermRecordingService).recordAsync("롤");
+		verify(searchTermRecordingService).recordAsync(eq("롤"), isNull());
 	}
 
 	@Test

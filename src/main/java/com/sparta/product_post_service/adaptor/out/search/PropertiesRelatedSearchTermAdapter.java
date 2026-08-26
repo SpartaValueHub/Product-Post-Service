@@ -7,13 +7,13 @@ import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
-import com.sparta.product_post_service.application.port.out.LoadRelatedSearchTermsPort;
+import com.sparta.product_post_service.application.port.out.LoadDictionaryRelatedSearchTermsPort;
 import com.sparta.product_post_service.application.support.SearchTermNormalizer;
 import com.sparta.product_post_service.config.SearchProperties;
 
 // YAML 사전 기반 연관 검색어 (키·값은 정규화 후 매칭)
 @Component
-public class PropertiesRelatedSearchTermAdapter implements LoadRelatedSearchTermsPort {
+public class PropertiesRelatedSearchTermAdapter implements LoadDictionaryRelatedSearchTermsPort {
 
 	// 정규화 키 → 연관어 목록
 	private final Map<String, List<String>> relatedByNormalizedQuery;

@@ -250,9 +250,14 @@ Category가 필요하면 Product-Post가 Category를 **조회·참고**할 뿐, 
 |----|------|
 | `search:terms:z` | 검색어 점수 ZSET (`ZINCRBY` — 기록 전용) |
 | `search:popular` | 추천 TopN 서빙 LIST (`@Scheduled` 베이크 스냅샷) |
-| `search:popular:bake-lock` | 다중 인스턴스 베이크 분산 락 |
+| `search:popular:bake-lock` | 다중 인스턴스 추천 베이크 분산 락 |
+| `search:cooc:z:{q}` | q 다음 검색어 동시검색 ZSET |
+| `search:cooc:sources` | 동시검색이 발생한 from 검색어 SET |
+| `search:related:{q}` | 연관 TopN 서빙 LIST |
+| `search:related:bake-lock` | 연관 베이크 분산 락 |
+| `search:session:last:{sessionKey}` | 세션 직전 검색어 |
 
-연관 1차는 YAML 사전 서빙(요청 시 원본 DB·무거운 집계 없음). Redis 연관 맵 캐시는 후속 가능.
+연관: 베이크 LIST → YAML 사전 → popular fallback. Redis 연관 맵은 동시검색 베이크로 채움.
 
 ---
 
@@ -262,8 +267,9 @@ Category가 필요하면 Product-Post가 Category를 **조회·참고**할 뿐, 
 2. **연관 검색어 API** (`/search/related`) — 1차는 YAML 사전, 이후 동시검색 — 완료
 3. **일반 검색 연결** — keyword 정규화 + 비동기 Redis 카운터 — 완료
 4. **일반 검색 쿼리 개선** — `LIKE %…%` → MySQL FULLTEXT(ngram, 제목만) — 완료
-5. **추천 TopN 주기 베이크** — `@Scheduled` → `search:popular` 서빙 분리 — 이번 이슈
-6. (선택) 자동완성 `suggestions`, 최근 검색어(유저별 Redis)
+5. **추천 TopN 주기 베이크** — `@Scheduled` → `search:popular` 서빙 분리 — 완료
+6. **연관 동시검색 베이크** — 세션 A→B 카운터 → `search:related:{q}` — 이번 이슈
+7. (선택) 자동완성 `suggestions`, 최근 검색어(유저별 Redis)
 
 ### 추천 TopN 베이크 요약
 

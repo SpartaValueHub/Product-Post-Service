@@ -9,8 +9,9 @@ import org.springframework.stereotype.Service;
 
 import com.sparta.product_post_service.application.port.in.GetPopularSearchTermsUseCase;
 import com.sparta.product_post_service.application.port.in.GetRelatedSearchTermsUseCase;
+import com.sparta.product_post_service.application.port.out.LoadBakedRelatedSearchTermsPort;
+import com.sparta.product_post_service.application.port.out.LoadDictionaryRelatedSearchTermsPort;
 import com.sparta.product_post_service.application.port.out.LoadPopularSearchTermsPort;
-import com.sparta.product_post_service.application.port.out.LoadRelatedSearchTermsPort;
 import com.sparta.product_post_service.application.support.SearchTermNormalizer;
 import com.sparta.product_post_service.config.SearchProperties;
 
@@ -23,8 +24,10 @@ public class SearchQueryService implements GetPopularSearchTermsUseCase, GetRela
 
 	// 인기 검색어 Port
 	private final LoadPopularSearchTermsPort loadPopularSearchTermsPort;
-	// 연관 검색어 Port
-	private final LoadRelatedSearchTermsPort loadRelatedSearchTermsPort;
+	// 베이크된 연관 검색어 Port
+	private final LoadBakedRelatedSearchTermsPort loadBakedRelatedSearchTermsPort;
+	// YAML 사전 연관 검색어 Port
+	private final LoadDictionaryRelatedSearchTermsPort loadDictionaryRelatedSearchTermsPort;
 	// 검색 정책·시드
 	private final SearchProperties searchProperties;
 
@@ -46,27 +49,33 @@ public class SearchQueryService implements GetPopularSearchTermsUseCase, GetRela
 			return List.of();
 		}
 
-		List<String> related = loadRelatedSearchTermsPort.loadRelated(normalized);
+		List<String> baked = loadBakedRelatedSearchTermsPort.loadRelated(normalized, limit);
+		List<String> fromBaked = filterRelated(baked, normalized, limit);
+		if (!fromBaked.isEmpty()) {
+			return fromBaked;
+		}
+
+		List<String> dictionary = loadDictionaryRelatedSearchTermsPort.loadRelated(normalized);
+		List<String> fromDictionary = filterRelated(dictionary, normalized, limit);
+		if (!fromDictionary.isEmpty()) {
+			return fromDictionary;
+		}
+
+		return filterRelated(getPopular(), normalized, limit);
+	}
+
+	private List<String> filterRelated(List<String> candidates, String normalizedQuery, int limit) {
 		List<String> result = new ArrayList<>();
-		for (String term : related) {
-			if (term == null || term.equals(normalized) || result.contains(term)) {
+		if (candidates == null) {
+			return List.of();
+		}
+		for (String term : candidates) {
+			if (term == null || term.equals(normalizedQuery) || result.contains(term)) {
 				continue;
 			}
 			result.add(term);
 			if (result.size() >= limit) {
-				return List.copyOf(result);
-			}
-		}
-
-		if (result.isEmpty()) {
-			for (String term : getPopular()) {
-				if (term.equals(normalized) || result.contains(term)) {
-					continue;
-				}
-				result.add(term);
-				if (result.size() >= limit) {
-					break;
-				}
+				break;
 			}
 		}
 		return List.copyOf(result);
@@ -84,7 +93,7 @@ public class SearchQueryService implements GetPopularSearchTermsUseCase, GetRela
 		return List.copyOf(unique);
 	}
 
-	private static List<String> cap(List<String> terms, int limit) {
+	private List<String> cap(List<String> terms, int limit) {
 		if (terms.size() <= limit) {
 			return List.copyOf(terms);
 		}

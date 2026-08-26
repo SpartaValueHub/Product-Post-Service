@@ -20,6 +20,7 @@ import com.sparta.product_post_service.application.port.in.dto.ProductPostSummar
 import com.sparta.product_post_service.application.port.out.ProductPostLoadPort;
 import com.sparta.product_post_service.application.port.out.dto.ProductPostCardPageProjection;
 import com.sparta.product_post_service.application.port.out.dto.ProductPostListCriteria;
+import com.sparta.product_post_service.application.support.SearchSessionKeyResolver;
 import com.sparta.product_post_service.application.support.SearchTermNormalizer;
 import com.sparta.product_post_service.config.SearchProperties;
 import com.sparta.product_post_service.domain.exception.ProductPostNotFoundException;
@@ -46,6 +47,8 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 	private final ProductPostLoadPort productPostLoadPort;
 	// 검색어 비동기 기록
 	private final SearchTermRecordingService searchTermRecordingService;
+	// 동시검색 세션 키
+	private final SearchSessionKeyResolver searchSessionKeyResolver;
 	// 검색 정책 (키워드 길이 등)
 	private final SearchProperties searchProperties;
 
@@ -80,10 +83,14 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 				query.getKeyword(),
 				searchProperties.keywordMaxLength()
 		);
+		String sessionKey = searchSessionKeyResolver.resolve(
+				query.getSearcherMemberUuid(),
+				query.getSearchSessionId()
+		);
 
 		// ngram 최소 길이 미만은 FULLTEXT 매칭 불가 — DB 조회 없이 빈 목록 (카운터는 기록)
 		if (keyword != null && keyword.length() < searchProperties.fulltextMinKeywordLength()) {
-			searchTermRecordingService.recordAsync(keyword);
+			searchTermRecordingService.recordAsync(keyword, sessionKey);
 			return emptyCardPage(page, size);
 		}
 
@@ -104,7 +111,7 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 		);
 
 		if (keyword != null) {
-			searchTermRecordingService.recordAsync(keyword);
+			searchTermRecordingService.recordAsync(keyword, sessionKey);
 		}
 
 		List<ProductPostCardDto> content = projection.getContent().stream()
