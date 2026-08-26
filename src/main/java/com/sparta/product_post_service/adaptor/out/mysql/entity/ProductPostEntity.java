@@ -62,7 +62,7 @@ public class ProductPostEntity {
 	@Column(name = "category_uuid", nullable = false, length = 36)
 	private String categoryUuid;
 
-	// 상품명
+	// 상품명 (keyword FULLTEXT: scripts/add-product-post-name-fulltext.sql — ft_pp_name_ngram)
 	@Column(name = "product_post_name", nullable = false, length = 100)
 	private String productPostName;
 

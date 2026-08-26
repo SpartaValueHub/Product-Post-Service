@@ -101,6 +101,6 @@ Product-Post-Service 헤더 검색어 API 명세서입니다.
 
 - `keyword` 정규화: trim, 연속 공백 축약, 소문자, `keyword-max-length` truncate
 - 정규화된 keyword가 있으면 **비동기**로 Redis `ZINCRBY search:terms:z` (검색 응답과 무관, 실패 무시)
-- 목록 쿼리 자체는 기존과 동일 (`LIKE` — FULLTEXT는 후속 이슈)
+- 목록 쿼리: 제목 `MATCH ... AGAINST` (FULLTEXT ngram, `ft_pp_name_ngram`). 2글자 미만 keyword는 빈 목록. 인덱스 SQL: `scripts/add-product-post-name-fulltext.sql`
 
 상세 Request/Response/Errors: [product-post-api.md](./product-post-api.md) 목록 섹션 참고.
