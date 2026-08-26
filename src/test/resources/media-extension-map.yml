@@ -1,0 +1,7 @@
+app:
+  media:
+    extension-by-content-type:
+      "[image/jpeg]": jpg
+      "[image/png]": png
+      "[image/webp]": webp
+      "[image/gif]": gif

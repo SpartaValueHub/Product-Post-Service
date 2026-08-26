@@ -41,6 +41,31 @@ class MediaObjectKeyPolicyTest {
 	}
 
 	@Test
+	void createPendingKey_fallsBackWhenExtensionMapEmpty() {
+		MediaObjectKeyPolicy emptyPolicy = new MediaObjectKeyPolicy(new MediaProperties(
+				"valuehub-media-test",
+				"https://dxxxx.cloudfront.net",
+				"ap-northeast-2",
+				5_242_880L,
+				300,
+				"pending/",
+				"posts/",
+				java.util.Map.of(),
+				java.util.List.of()
+		));
+
+		String key = emptyPolicy.createPendingKey(MEMBER_UUID, "image/jpeg");
+
+		assertThat(key).startsWith("pending/posts/" + MEMBER_UUID + "/");
+		assertThat(key).endsWith(".jpg");
+	}
+
+	@Test
+	void requireContentType_stripsCharsetParameter() {
+		assertThat(policy.requireContentType("image/jpeg; charset=UTF-8")).isEqualTo("image/jpeg");
+	}
+
+	@Test
 	void resolve_promotesOwnPendingUrlToConfirmed() {
 		MediaObjectRef ref = policy.resolve(
 				MEMBER_UUID,

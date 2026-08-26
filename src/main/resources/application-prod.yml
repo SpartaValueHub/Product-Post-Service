@@ -16,3 +16,5 @@ eureka:
 logging:
   level:
     root: WARN
+    com.sparta.product_post_service.application.service.IssuePresignedUploadService: INFO
+    com.sparta.product_post_service.config.MediaAwsConfig: INFO
