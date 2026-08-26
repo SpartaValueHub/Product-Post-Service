@@ -38,7 +38,10 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
 | 404 | PRODUCT_POST_NOT_FOUND | 판매글 없음, 또는 숨김·삭제되어 미노출 |
 | 400 | INVALID_CONTENT_TYPE | Presigned: 허용되지 않는 Content-Type |
 | 400 | INVALID_CONTENT_LENGTH | Presigned: 용량 범위 초과·누락 |
+| 400 | INVALID_MEDIA_KEY | 미디어 URL/key 형식 오류 |
+| 400 | MEDIA_OBJECT_NOT_FOUND | pending 객체가 S3에 없음 |
 | 500 | MEDIA_CONFIG_MISSING | Presigned: S3_BUCKET / CLOUDFRONT_BASE_URL 미설정 |
+| 500 | MEDIA_STORAGE_FAILED | S3 Copy·Delete 실패 |
 
 ---
 
@@ -46,7 +49,7 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
 
 ### Summary
 판매글·증빙 이미지 업로드용 S3 Presigned PUT URL과 CloudFront `publicUrl`을 발급한다.  
-발급 후 클라이언트가 S3에 PUT하고, 등록/수정 API의 `images[].imageUrl` / `documents[].imageUrl`에 `publicUrl`을 넣는다.
+발급 key는 **미확정 `pending/posts/{memberUuid}/...`** 이다. PUT 후 등록/수정 API의 `images[].imageUrl` / `documents[].imageUrl`에 받은 `publicUrl`을 넣으면 BE가 정식 `posts/` 로 승격한다.
 
 ### Method · Path
 `POST /api/v1/product-posts/media/presigned-url`
@@ -77,15 +80,15 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
 | 필드 | 타입 | 설명 |
 |------|------|------|
 | uploadUrl | string | S3 Presigned PUT URL |
-| s3Key | string | `posts/{memberUuid}/{uuid}.{ext}` |
+| s3Key | string | `pending/posts/{memberUuid}/{uuid}.{ext}` |
 | publicUrl | string | `CLOUDFRONT_BASE_URL` + `/` + s3Key |
 | expiresInSeconds | number | 기본 300 |
 
 ### 클라이언트 업로드
 
-1. 본 API로 `uploadUrl`·`publicUrl` 수신
+1. 본 API로 `uploadUrl`·`publicUrl` 수신 (`s3Key`는 `pending/posts/...`)
 2. `uploadUrl`로 **PUT** (헤더 `Content-Type`은 요청과 **동일**)
-3. `POST/PUT /product-posts`의 `imageUrl`에 `publicUrl` 전달
+3. `POST/PUT /product-posts`의 `imageUrl`에 Presign `publicUrl` 전달 → BE가 `posts/`로 승격 후 DB 저장
 
 ### Errors
 
@@ -130,7 +133,7 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
 | regionDong | string | N | 거래 희망 동(읍면동). 최대 50자. FE 표시 1순위 |
 | regionGu | string | N | 거래 희망 구(시군구). 최대 50자. FE 표시 2순위 (`regionDong` 없을 때) |
 | images | array | Y | 1~10개. **배열 순서 = 노출 순서**(0번 인덱스가 대표/썸네일). 서버가 `sort_order` 1..n 부여 |
-| images[].imageUrl | string | Y | 최대 500자 (업로드 URL) |
+| images[].imageUrl | string | Y | 최대 500자. Presign `publicUrl`(pending) 또는 이미 승격된 `posts/` CloudFront URL. 저장 값은 정식 URL |
 | documents | array | N | 선택 |
 | documents[].documentType | string | Y(항목 시) | `WARRANTY` \| `RECEIPT` \| `APPRAISAL` |
 | documents[].imageUrl | string | Y(항목 시) | 최대 500자 |
@@ -222,7 +225,11 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
 |--------|------|------|
 | 400 | VALIDATION_FAILED | 요청 필드 검증 실패 (최소가 미만 포함, 설정값 기준) |
 | 400 | INVALID_ARGUMENT | Domain 규칙 위반 등 |
+| 400 | INVALID_MEDIA_KEY | 미디어 URL/key 형식 오류 |
+| 400 | MEDIA_OBJECT_NOT_FOUND | pending 객체가 S3에 없음 |
 | 401 | UNAUTHORIZED | `X-Member-Uuid` 없음 |
+| 403 | FORBIDDEN | 타인 pending/정식 미디어 key |
+| 500 | MEDIA_STORAGE_FAILED | S3 Copy·Delete 실패 |
 
 ---
 
@@ -257,7 +264,7 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
 | Body | regionDong | string | N | 거래 희망 동(읍면동). 최대 50자. blank/미전달 시 null 저장 |
 | Body | regionGu | string | N | 거래 희망 구(시군구). 최대 50자. blank/미전달 시 null 저장 |
 | Body | images | array | Y | 1~10개. **전체 교체**. 배열 순서 = 노출 순서, 빠진 기존 이미지는 soft delete |
-| Body | images[].imageUrl | string | Y | 최대 500자 |
+| Body | images[].imageUrl | string | Y | 최대 500자. Presign pending URL 또는 유지할 정식 `posts/` URL |
 | Body | documents | array | N | **전체 교체**. 빈 배열이면 기존 서류 전부 soft delete |
 | Body | documents[].documentType | string | Y(항목 시) | `WARRANTY` \| `RECEIPT` \| `APPRAISAL` |
 | Body | documents[].imageUrl | string | Y(항목 시) | 최대 500자 |
@@ -298,9 +305,12 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
 |--------|------|------|
 | 400 | VALIDATION_FAILED | 요청 필드 검증 실패 |
 | 400 | INVALID_ARGUMENT | Domain 규칙 위반 (예: 판매중이 아님, 최소가 미만) |
+| 400 | INVALID_MEDIA_KEY | 미디어 URL/key 형식 오류 |
+| 400 | MEDIA_OBJECT_NOT_FOUND | pending 객체가 S3에 없음 |
 | 401 | UNAUTHORIZED | `X-Member-Uuid` 없음 |
-| 403 | FORBIDDEN | 판매자 본인이 아님 |
+| 403 | FORBIDDEN | 판매자 본인이 아님, 또는 타인 미디어 key |
 | 404 | PRODUCT_POST_NOT_FOUND | UUID 없음 또는 삭제됨 |
+| 500 | MEDIA_STORAGE_FAILED | S3 Copy·Delete 실패 |
 
 ---
 
