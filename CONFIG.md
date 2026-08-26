@@ -92,6 +92,9 @@ Auth / Gateway와 **동일 Redis**를 사용합니다. Product-Post에 Redis 컨
 | `REDIS_HOST` | Redis 호스트 | `127.0.0.1` |
 | `REDIS_PORT` | Redis 포트 | `6379` |
 
+검색 정책은 `application.yml` 의 `product-post.search.*` (개수·베이크 주기·키 이름).  
+기본: `popular-limit=5`, `bake-interval-ms=3600000`(60분), 서빙 키 `search:popular`.
+
 ## 수동 SQL 스크립트 (`scripts/`)
 
 Hibernate `ddl-auto=update` 로 안 잡히거나 prod `validate` 전에 필요한 인덱스·컬럼:

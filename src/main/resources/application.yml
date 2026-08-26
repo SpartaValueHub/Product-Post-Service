@@ -4,12 +4,21 @@ product-post:
     min-price: ${PRODUCT_POST_MIN_PRICE:500000}
     bump-daily-limit: ${PRODUCT_POST_BUMP_DAILY_LIMIT:2}
     bump-cooldown-hours: ${PRODUCT_POST_BUMP_COOLDOWN_HOURS:12}
-  search:
-    popular-limit: 10
+	search:
+    popular-limit: 5
     keyword-max-length: 50
     # MySQL ngram_token_size 기본값과 맞춤
     fulltext-min-keyword-length: 2
     terms-zset-key: search:terms:z
+    popular-serving-key: search:popular
+    # 추천 TopN 베이크 주기 (기본 60분)
+    bake-interval-ms: 3600000
+    # 기동 후 첫 베이크까지 (기본 1분)
+    bake-initial-delay-ms: 60000
+    # ZSET 최소 점수 (미만 제외)
+    bake-min-score: 1
+    bake-lock-key: search:popular:bake-lock
+    bake-lock-ttl-ms: 300000
     popular-seed:
       - 롤렉스
       - 샤넬백
