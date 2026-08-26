@@ -41,8 +41,11 @@ public class RedisSearchTermAdapter implements
 			return;
 		}
 		try {
-			stringRedisTemplate.opsForZSet()
-					.incrementScore(searchProperties.termsZsetKey(), normalizedTerm, 1.0d);
+			stringRedisTemplate.opsForZSet().incrementScore(
+					searchProperties.termsZsetKey(),
+					normalizedTerm,
+					searchProperties.termScoreIncrement()
+			);
 		} catch (RuntimeException ex) {
 			log.warn("검색어 카운터 기록 실패 term={}", normalizedTerm, ex);
 		}
@@ -92,7 +95,7 @@ public class RedisSearchTermAdapter implements
 	@Override
 	public void savePopular(List<String> terms) {
 		String servingKey = searchProperties.popularServingKey();
-		String buildingKey = servingKey + ":building";
+		String buildingKey = servingKey + searchProperties.snapshotBuildingSuffix();
 		try {
 			stringRedisTemplate.delete(buildingKey);
 			if (terms == null || terms.isEmpty()) {
@@ -106,7 +109,7 @@ public class RedisSearchTermAdapter implements
 			try {
 				stringRedisTemplate.delete(buildingKey);
 			} catch (RuntimeException ignored) {
-				// building 키 정리 실패는 무시 (TTL 없는 임시 키 — 다음 베이크에서 overwrite)
+				// 다음 베이크에서 overwrite
 			}
 		}
 	}
@@ -116,7 +119,7 @@ public class RedisSearchTermAdapter implements
 		try {
 			Boolean acquired = stringRedisTemplate.opsForValue().setIfAbsent(
 					searchProperties.bakeLockKey(),
-					"1",
+					searchProperties.bakeLockValue(),
 					Duration.ofMillis(searchProperties.bakeLockTtlMs())
 			);
 			return Boolean.TRUE.equals(acquired);

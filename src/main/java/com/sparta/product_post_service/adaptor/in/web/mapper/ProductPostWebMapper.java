@@ -112,6 +112,8 @@ public final class ProductPostWebMapper {
 	public static ListProductPostsQuery toListQuery(
 			List<String> categoryUuids,
 			String memberUuid,
+			String searcherMemberUuid,
+			String searchSessionId,
 			String tradeStatus,
 			String keyword,
 			Long minPrice,
@@ -124,6 +126,8 @@ public final class ProductPostWebMapper {
 		return ListProductPostsQuery.builder()
 				.categoryUuids(categoryUuids)
 				.memberUuid(memberUuid)
+				.searcherMemberUuid(searcherMemberUuid)
+				.searchSessionId(searchSessionId)
 				.tradeStatus(tradeStatus)
 				.keyword(keyword)
 				.minPrice(minPrice)

@@ -90,12 +90,16 @@ public class ProductPostController {
 			@RequestParam(required = false) List<String> conditionGrades,
 			@RequestParam(required = false) List<String> documentTypes,
 			@RequestParam(defaultValue = "1") int page,
-			@RequestParam(defaultValue = "20") int size
+			@RequestParam(defaultValue = "20") int size,
+			@RequestHeader(value = InternalAuthHeaders.MEMBER_UUID, required = false) String searcherMemberUuid,
+			@RequestHeader(value = InternalAuthHeaders.SEARCH_SESSION_ID, required = false) String searchSessionId
 	) {
 		ProductPostCardPageDto result = listProductPostsUseCase.list(
 				ProductPostWebMapper.toListQuery(
 						categoryUuids,
 						memberUuid,
+						searcherMemberUuid,
+						searchSessionId,
 						tradeStatus,
 						keyword,
 						minPrice,

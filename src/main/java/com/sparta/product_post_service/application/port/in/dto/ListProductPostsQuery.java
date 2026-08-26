@@ -14,6 +14,10 @@ public class ListProductPostsQuery {
 	private final List<String> categoryUuids;
 	// 판매자(회원) UUID — 해당 회원의 글만 (프로필 모달용, null/blank면 미적용)
 	private final String memberUuid;
+	// 검색자 회원 UUID (Gateway X-Member-Uuid, 동시검색 세션용 — 판매자 memberUuid와 별개)
+	private final String searcherMemberUuid;
+	// FE 검색 세션 ID (X-Search-Session-Id, 비로그인 동시검색용)
+	private final String searchSessionId;
 	// 거래 상태 필터 (SELLING|RESERVED|SOLD_OUT, null/blank면 세 상태 전체)
 	private final String tradeStatus;
 	// 상품명 검색어

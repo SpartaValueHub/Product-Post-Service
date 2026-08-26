@@ -52,9 +52,20 @@ Product-Post-Service 헤더 검색어 API 명세서입니다.
 
 ### 서빙 방식
 
-- Enter 검색 → 비동기 `ZINCRBY` (`terms-zset-key`)
+- Enter 검색 → 비동기 `ZINCRBY` (`terms-zset-key`) + (세션 있으면) 동시검색 카운터
 - `@Scheduled` (기본 60분)가 TopN을 `popular-serving-key` LIST에 스냅샷
 - 이 API는 스냅샷만 조회. 비어 있으면 `popular-seed`
+
+### 동시검색 세션 (연관 베이크용)
+
+목록 검색(`GET /product-posts?keyword=`) 시 선택 헤더:
+
+| 헤더 | 설명 |
+|------|------|
+| `X-Member-Uuid` | Gateway가 넣는 로그인 회원 (검색자). 판매자 필터 `memberUuid` 쿼리와 별개 |
+| `X-Search-Session-Id` | FE 발급 UUID 등. 비로그인 동시검색용 |
+
+둘 다 없으면 인기 카운터만 쌓이고 동시검색은 기록하지 않는다.
 
 ### Errors
 없음 (장애 시 시드 또는 빈 배열)
@@ -83,7 +94,8 @@ Product-Post-Service 헤더 검색어 API 명세서입니다.
 
 | 필드 | 타입 | 설명 |
 |------|------|------|
-| terms | string[] | YAML `product-post.search.related` 사전(정규화 매칭). 없으면 추천 검색어 fallback. 자기 자신·중복 제외 |
+| terms | string[] | 베이크된 Redis LIST(`search:related:{q}`) → 없으면 YAML 사전 → 없으면 추천 검색어. 자기 자신·중복 제외. 최대 `popular-limit` |
+
 
 ```json
 {

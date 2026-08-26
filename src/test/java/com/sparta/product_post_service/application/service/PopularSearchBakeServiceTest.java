@@ -37,25 +37,11 @@ class PopularSearchBakeServiceTest {
 
 	@BeforeEach
 	void setUp() {
-		SearchProperties properties = new SearchProperties(
-				5,
-				50,
-				2,
-				"search:terms:z",
-				"search:popular",
-				3_600_000L,
-				60_000L,
-				1.0d,
-				"search:popular:bake-lock",
-				300_000L,
-				List.of("롤렉스"),
-				Map.of()
-		);
 		popularSearchBakeService = new PopularSearchBakeService(
 				loadSearchTermRankingPort,
 				savePopularSearchTermsPort,
 				searchBakeLockPort,
-				properties
+				minimalSearchProperties()
 		);
 	}
 
@@ -80,5 +66,35 @@ class PopularSearchBakeServiceTest {
 		verify(loadSearchTermRankingPort, never()).loadTopTerms(anyInt(), anyDouble());
 		verify(savePopularSearchTermsPort, never()).savePopular(anyList());
 		verify(searchBakeLockPort, never()).unlock();
+	}
+
+	private static SearchProperties minimalSearchProperties() {
+		return new SearchProperties(
+				5,
+				50,
+				2,
+				"search:terms:z",
+				"search:popular",
+				":building",
+				3_600_000L,
+				60_000L,
+				1.0d,
+				1.0d,
+				"search:popular:bake-lock",
+				300_000L,
+				"1",
+				"search:cooc:z:",
+				"search:cooc:sources",
+				1.0d,
+				"search:related:",
+				2.0d,
+				"search:related:bake-lock",
+				"search:session:last:",
+				"m:",
+				"s:",
+				1_800_000L,
+				List.of("롤렉스"),
+				Map.of()
+		);
 	}
 }
