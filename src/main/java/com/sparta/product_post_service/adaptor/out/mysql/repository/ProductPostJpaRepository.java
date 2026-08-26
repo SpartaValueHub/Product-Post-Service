@@ -1,11 +1,13 @@
 package com.sparta.product_post_service.adaptor.out.mysql.repository;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -19,6 +21,20 @@ public interface ProductPostJpaRepository extends JpaRepository<ProductPostEntit
 
 	// 판매글 UUID로 조회
 	Optional<ProductPostEntity> findByProductPostUuid(String productPostUuid);
+
+	// 거래 상태·수정시각만 갱신 (이미지·서류 행 미터치)
+	@Modifying(clearAutomatically = true)
+	@Query("""
+			UPDATE ProductPostEntity p
+			SET p.tradeStatus = :tradeStatus,
+			    p.updatedAt = :updatedAt
+			WHERE p.productPostId = :productPostId
+			""")
+	int updateTradeStatus(
+			@Param("productPostId") Long productPostId,
+			@Param("tradeStatus") TradeStatus tradeStatus,
+			@Param("updatedAt") Instant updatedAt
+	);
 
 	// FO 목록 (keyword 없음 — JPQL, 인덱스 필터 경로)
 	@Query("""

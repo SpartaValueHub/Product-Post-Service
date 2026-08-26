@@ -97,6 +97,19 @@ public class ProductPostSaveAdapter implements ProductPostSavePort {
 		return ProductPostEntityMapper.toDomain(entity, imageEntities, documentEntities);
 	}
 
+	// 거래 상태만 갱신
+	@Override
+	public void updateTradeStatus(ProductPost listing) {
+		int updated = productPostJpaRepository.updateTradeStatus(
+				listing.getProductPostId(),
+				listing.getTradeStatus(),
+				listing.getUpdatedAt()
+		);
+		if (updated == 0) {
+			throw new IllegalArgumentException("수정할 판매글을 찾을 수 없습니다.");
+		}
+	}
+
 	// 신규 이미지 Entity 생성
 	private ProductPostImageEntity toNewImageEntity(Long productPostId, ProductPostImage image) {
 		return ProductPostImageEntity.create(

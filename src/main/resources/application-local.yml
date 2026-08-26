@@ -18,3 +18,7 @@ eureka:
 logging:
   level:
     root: INFO
+
+product-post:
+  kafka:
+    enabled: ${PRODUCT_POST_KAFKA_ENABLED:false}
