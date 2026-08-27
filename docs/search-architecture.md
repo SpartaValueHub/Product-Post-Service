@@ -2,7 +2,36 @@
 
 > ES(유료 매니지드) 없이, DB 부하를 최소화하는 방향.  
 > 가정: 회원 약 5천만 규모의 대규모 서비스.  
-> 범위: 추천 검색어 / 연관 검색어 / 일반 검색(상품 결과).
+> 범위: 추천 검색어 / 연관 검색어 / 일반 검색(상품 결과). (자동완성은 선택 구현 완료)  
+> API 명세: [search-api.md](./search-api.md)  
+> 작업 서비스: **Product-Post-Service** (Category-Service 아님)
+
+---
+
+## 0. 붙여넣기 초안 대비 변경 요약
+
+### 삭제·폐기
+- `LIKE '%…%'` 를 현재 일반 검색 방식으로 서술 → **폐기** (FULLTEXT ngram으로 전환 완료)
+- “배치 5~15분”만 강조한 미정 수치 → **실제 YAML 기본 60분**으로 교체
+- “검색 로그 MySQL 테이블 append”를 1차 필수처럼 서술 → **1차는 Redis 카운터만** (MySQL 로그 테이블 미도입)
+- Category가 검색 API를 소유한다는 뉘앙스 → **삭제**
+- 구현 전 미결 질문(§10 구버전) → **결정 완료 표로 교체**
+- 최근 검색어(유저별 Redis) → **이번 범위에서 스킵** (필요 시 후속)
+
+### 수정
+- 추천 점수: 클릭×2 포함 예시 → **클릭 가중은 미구현**. 실제는 `24h×3 + (7d−24h)×1`
+- 연관 1단계 “카테고리 인기” → 실제 1차는 **YAML 사전** (+ popular fallback). Category HTTP 연동은 후속
+- 연관 2단계 동시검색 → **구현 완료** (`X-Member-Uuid` / `X-Search-Session-Id`)
+- 일반 검색 → **제목 FULLTEXT(ngram) 적용 완료**
+- Redis → Auth/Gateway와 **동일 Redis**, prefix `search:` 분리
+- 구현 순서 → 전부 **필수 완료**. 최근 검색어만 선택 미착수
+
+### 추가
+- hour 버킷 카운터 `search:terms:h:{yyyyMMddHH}`
+- 가중 추천 베이크·후보 상한(`bake-candidate-limit`)
+- 자동완성 `GET /search/suggestions` (선택, 구현 완료)
+- Redis 키 표·Gateway public `/*/api/v1/search/**`
+- FE 연동 매핑 표
 
 ---
 
@@ -12,13 +41,14 @@
 
 위험한 것은 **타이핑·추천 UI 트래픽이 판매글(원본) 테이블을 직접 치는 것**이다.
 
-검색을 세 층으로 분리한다.
+검색을 세 층(+선택 자동완성)으로 분리한다.
 
 | 층 | 기능 | 사용자 체감 | 금지 |
 |----|------|-------------|------|
 | A | 추천 검색어 | 검색창 비었을 때 “이거 어때?” | 판매글 전체 스캔·실시간 GROUP BY |
 | B | 연관 검색어 | 입력/검색 후 “이것도?” | 요청 시점 무거운 JOIN·집계 |
 | C | 일반 검색 | Enter → 실제 상품 목록 | `LIKE '%키워드%'` 전표 스캔 |
+| (선택) | 자동완성 | 타이핑 중 prefix 후보 | 판매글 테이블 prefix 조회 |
 
 Elasticsearch는 좋은 검색 엔진이지 유일한 해법이 아니다.  
 무료·저비용의 핵심은 **원본 DB와 검색 UI를 분리**하는 것이다.
@@ -27,13 +57,13 @@ Elasticsearch는 좋은 검색 엔진이지 유일한 해법이 아니다.
 
 ## 2. 왜 MySQL만으로 헤더 검색을 하면 터지나
 
-현재 목록 검색(개념, 개선 전):
+개선 전(개념):
 
 ```text
 WHERE product_post_name LIKE '%빈티지%'
 ```
 
-개선 후(제목 FULLTEXT ngram):
+개선 후(현재, 제목 FULLTEXT ngram):
 
 ```text
 WHERE MATCH(product_post_name) AGAINST ('빈티지' IN NATURAL LANGUAGE MODE)
@@ -45,8 +75,8 @@ WHERE MATCH(product_post_name) AGAINST ('빈티지' IN NATURAL LANGUAGE MODE)
 
 따라서:
 
-- **추천 / 연관 / (자동완성)** → 원본 판매글 테이블 조회 금지
-- **일반 검색(결과)** → 원본(또는 FULLTEXT)은 쓰되, 인덱스가 타는 방식만 허용 + 읽기 분산
+- **추천 / 연관 / 자동완성** → 원본 판매글 테이블 조회 금지
+- **일반 검색(결과)** → FULLTEXT(인덱스)만 허용. (리드 레플리카는 후속)
 
 ---
 
@@ -55,59 +85,51 @@ WHERE MATCH(product_post_name) AGAINST ('빈티지' IN NATURAL LANGUAGE MODE)
 ```text
 [FE 헤더]
    │
-   ├─ 빈 입력 ──────────────► GET /search/popular      ──► Redis (TopN)
-   ├─ 타이핑 중(선택) ──────► GET /search/suggestions ──► Redis / 사전(prefix)
-   ├─ 결과·사이드 ──────────► GET /search/related      ──► Redis (미리 계산된 맵)
-   └─ Enter / 검색 버튼 ────► GET /product-posts?keyword= ──► DB(가능하면 리드) + 인덱스
+   ├─ 빈 입력 ──────────────► GET /api/v1/search/popular         ──► Redis LIST (TopN)
+   ├─ 타이핑 중(선택) ──────► GET /api/v1/search/suggestions?q= ──► Redis lex 사전 / YAML fallback
+   ├─ 결과·사이드 ──────────► GET /api/v1/search/related?q=     ──► Redis LIST → YAML → popular
+   └─ Enter / 검색 버튼 ────► GET /api/v1/product-posts?keyword= ──► MySQL FULLTEXT(ngram)
                                       │
                                       ▼
-                              (비동기) 검색 로그 적재
+                              (비동기) hour 버킷 ZINCRBY + (세션 있으면) 동시검색
                                       │
-                              배치가 점수·연관 계산 → Redis 갱신
+                              @Scheduled 베이크 → popular / related / suggest 갱신
 ```
 
-**동기 경로**(사용자가 기다림)와 **비동기 경로**(로그·랭킹)를 나눈다.  
-검색 API 응답이 로그 저장 완료를 기다리면 안 된다. (검색 성공 ≠ 로그 성공)
+**동기 경로**(사용자가 기다림)와 **비동기 경로**(카운터·베이크)를 나눈다.  
+검색 API 응답이 로그/카운터 저장 완료를 기다리면 안 된다. (검색 성공 ≠ 카운터 성공)
 
 ---
 
-## 4. 추천 검색어 (Popular / Recommended)
+## 4. 추천 검색어 (Popular)
 
 ### 정의
 
 검색창이 비었거나 포커스만 왔을 때 보여주는 **인기·운영 추천 키워드** 목록.
 
-### 왜 DB를 안 치나
+### 현재 구현
 
-추천은 **미리 뽑아 둔 리스트**면 충분하다.  
-요청마다 `GROUP BY keyword ORDER BY COUNT` 하면 로그가 커질수록 DB가 죽는다.
+1. Enter 검색 시 정규화 키워드를 **비동기**로 hour 버킷에 `ZINCRBY`  
+   (`search:terms:h:{yyyyMMddHH}`, TTL ~8일)
+2. `@Scheduled`(기본 **60분**)가 24h/7d 가중 점수로 TopN 계산
+3. 결과를 **`search:popular` LIST**에 스냅샷
+4. `GET /search/popular`는 스냅샷만 조회. 비면 YAML `popular-seed`
 
-### 저부하 방식 (권장)
-
-1. 사용자가 검색(Enter)할 때 검색어를 **비동기 로그/카운터**로만 남긴다.
-2. **배치(예: 5~15분)** 가 점수를 계산해 Top 10~20을 만든다.
-3. 결과를 **Redis 한 키**에 저장한다. (`search:popular` 등)
-4. API는 Redis만 읽는다. → 서빙 경로에서 MySQL 거의 0회.
-
-### 점수 정책 예시
+### 점수 (현재)
 
 ```text
-score = 최근 24시간 검색수 × 3
-      + 최근 7일 검색수 × 1
-      + 검색 후 목록/상세 클릭 × 2
+score = count24h × weight-recent-24h(기본 3)
+      + max(0, count7d − count24h) × weight-recent-7d-remainder(기본 1)
 ```
 
-부가 규칙:
-
-- 최소 검색수 컷 (콜드·노이즈 제거)
-- 금칙어 필터
-- 동의어·표기 통일 (`빈티지백` / `빈티지 백`)
-- 초기에 로그가 없으면 **운영 시드 키워드**(카테고리명, 시즌)로 bootstrap
-- (선택) 운영 pin 2~3개 + 나머지 자동 TopN
+- 클릭 가중: **미구현** (후속)
+- 후보 상한: 윈도우별 `bake-candidate-limit`(기본 500)
+- TopN 개수: `popular-limit`(기본 **5**)
+- 금칙어·운영 pin·동의어 사전: **미구현** (정규화는 trim/공백축약/소문자/길이제한)
 
 ### 설명용 한 줄
 
-> 추천 검색어는 실시간 집계가 아니라, 비동기 로그를 배치가 집계한 TopN을 Redis에서 서빙한다.
+> 추천 검색어는 실시간 집계가 아니라, 비동기 hour 카운터를 스케줄이 가중 집계한 TopN을 Redis에서 서빙한다.
 
 ---
 
@@ -117,34 +139,28 @@ score = 최근 24시간 검색수 × 3
 
 이미 어떤 쿼리 `q`가 있을 때, **옆길로 유도**하는 키워드.
 
-### 왜 실시간 DB 조인이 위험한가
+### 현재 구현 (1단계 + 2단계 모두)
 
-“A 다음에 뭘 많이 검색했지?”를 요청 순간 SQL로 하면  
-로그 증가와 함께 무거운 셀프조인·집계가 된다.
+**조회 우선순위**
 
-### 저부하 방식 (단계)
+1. Redis `search:related:{정규화q}` (동시검색 베이크 LIST)
+2. YAML `product-post.search.related` 사전
+3. 추천 검색어(popular) fallback  
+자기 자신·중복 제외. 최대 `popular-limit`.
 
-**1단계 (데이터 적어도 가능) — 사전·카테고리**
+**동시검색 기록** (목록 검색 Enter 시, 선택 헤더)
 
-- `샤넬백` → 같은 카테고리 인기 검색어, 사전 확장  
-  예: `샤넬백 보증서`, `샤넬 클래식`
-- `q → [관련…]` 매핑을 **미리** 만들어 Redis에 캐시
+| 헤더 | 용도 |
+|------|------|
+| `X-Member-Uuid` | 로그인 검색자 (Gateway) |
+| `X-Search-Session-Id` | 비로그인 FE 세션 |
 
-**2단계 (로그 축적 후) — 동시 검색 (co-occurrence)**
-
-- 같은 세션/유저가 A 다음 B를 검색한 횟수를 **배치로** 집계
-- `related:{정규화된q}` = `[…]` 를 Redis에 저장
-- API는 키 조회만
-
-**안전장치**
-
-- 관련도 부족 시 **인기 검색어 fallback**
-- 자기 자신·동의어 제외
-- 1차에서는 유저별 개인화 제외 (캐시 키 폭발·복잡도 방지)
+둘 다 없으면 인기 카운터만 쌓이고 동시검색은 기록하지 않는다.  
+스케줄이 `search:cooc:z:{q}` → `search:related:{q}` 로 베이크.
 
 ### 설명용 한 줄
 
-> 연관어는 요청 시점에 계산하지 않고, 카테고리/동시검색을 배치로 구워 Redis 맵으로 제공한다.
+> 연관어는 요청 시점에 계산하지 않고, 동시검색(및 YAML 사전)을 미리 구워 Redis/설정으로 제공한다.
 
 ---
 
@@ -153,29 +169,24 @@ score = 최근 24시간 검색수 × 3
 ### 정의
 
 Enter 이후 **판매글 카드 목록**.  
-현재 ValueHub: `GET /api/v1/product-posts?keyword=...`
+`GET /api/v1/product-posts?keyword=...`
 
-### ES 없이 DB 부하를 줄이는 방법
+### 현재
 
-| 방식 | 부하 | 품질 | 비고 |
-|------|------|------|------|
-| `LIKE '%단어%'` | 최악 | 보통 | 대규모 금지에 가깝다 |
-| `LIKE '단어%'` (prefix) | 양호 | 앞글자만 | 제목 prefix용 |
-| MySQL InnoDB **FULLTEXT** | 중~양호 | 단어 단위 | 매니지드 ES 없이도 가능 |
-| 검색용 요약 테이블 | 양호 | 설계 따름 | 제목·카테고리 등만 복제 |
+| 방식 | 상태 |
+|------|------|
+| `LIKE '%단어%'` | ❌ 제거됨 |
+| MySQL FULLTEXT **ngram** (제목만) | ✅ `ft_pp_name_ngram` |
+| keyword 정규화 + 비동기 Redis 카운터 | ✅ |
+| 리드 레플리카 / 결과 캐시 | ⬜ 후속 |
+| 제목+본문 FULLTEXT | ⬜ 후속 |
 
-추가 원칙:
-
-1. **읽기 분산** — 검색/목록은 리드 레플리카, 마스터는 쓰기 위주
-2. **검색 대상 축소** — `PUBLIC`·미삭제·(가능하면) 최근 N일 등
-3. **짧은 결과 캐시** — 동일 keyword+필터+page (개인화·실시간성과 트레이드오프)
-4. 그래도 부족할 때 — OpenSearch **셀프호스트** 등 검토 (유료 매니지드 ES와는 다른 축)
-
-회원 5천만과 별개로, 병목은 보통 **활성 공개 판매글 수 × 검색 QPS** 이다.
+- 2글자 미만 keyword → 빈 목록 (`fulltext-min-keyword-length`, ngram_token_size=2)
+- 인덱스 SQL: `scripts/add-product-post-name-fulltext.sql` (ddl-auto로 생성 안 됨)
 
 ### 설명용 한 줄
 
-> 일반 검색만 원본(또는 FULLTEXT)을 치고, UI용 추천/연관은 원본을 치지 않는다. 원본 쿼리는 인덱스가 타는 형태만 허용한다.
+> 일반 검색만 원본 FULLTEXT를 치고, UI용 추천/연관/자동완성은 원본을 치지 않는다.
 
 ---
 
@@ -184,20 +195,18 @@ Enter 이후 **판매글 카드 목록**.
 ```text
 [사용자 검색 Enter]
         │
-        ├─► 목록 API (동기) ──► DB / FULLTEXT
+        ├─► 목록 API (동기) ──► MySQL FULLTEXT(ngram, 제목)
         │
-        └─► 검색 로그 (비동기, 실패해도 검색은 성공)
+        └─► 카운터 (비동기, 실패해도 검색은 성공)
                 │
                 ▼
-         로그·카운터 (Redis INCR 및/또는 로그 테이블 append)
-                │ 배치
+         hour ZSET + (세션 있으면) co-occurrence
+                │ @Scheduled (~60분)
                 ▼
-         인기 TopN  → 추천 검색어 API
-         연관 맵    → 연관 검색어 API
-         사전       → (선택) 자동완성
+         popular LIST / related LIST / suggest dict
                 │
                 ▼
-              Redis 서빙
+              Redis 서빙 (API는 읽기만)
 ```
 
 ### Redis를 쓰는 이유
@@ -208,118 +217,110 @@ Enter 이후 **판매글 카드 목록**.
 | 헤더 QPS | DB가 그대로 노출 | DB 보호 |
 | 역할 | 원본·장기 보관에 적합 | 캐시·랭킹 서빙에 적합 |
 
-원본 진실(로그)은 DB에 둘 수 있어도, **핫 서빙은 Redis**가 맞다.
+1차는 **Redis 카운터 + 베이크 서빙**만 사용. MySQL 검색 로그 테이블은 없음.
 
 ---
 
 ## 8. 어느 서비스에서 작업하나?
 
-### 결론: Category-Service 아님. **1차는 Product-Post-Service**
+### 결론: Category-Service 아님. **Product-Post-Service**
 
 | 후보 | 적합? | 이유 |
 |------|-------|------|
-| **Category-Service** | ❌ | 카테고리 마스터 도메인. 검색어·판매글 검색 책임과 무관 |
-| **Product-Post-Service** | ✅ 1차 | 이미 `GET /product-posts?keyword=` 일반 검색이 여기 있음. 검색 로그·인기/연관도 “상품 검색”에 붙는 것이 자연스러움 |
-| Search-Service (신규) | △ 이후 | 검색이 커지고 Auth/타 도메인 검색까지 합치면 분리 검토 |
+| **Category-Service** | ❌ | 카테고리 마스터. 검색어·판매글 검색 책임과 무관 |
+| **Product-Post-Service** | ✅ | `keyword` 목록 검색·검색 카운터·popular/related/suggestions 모두 여기 |
+| Search-Service (신규) | △ 이후 | 검색이 커지면 분리 검토 |
 
-### 왜 Category가 아닌가
-
-- 연관 검색에 **카테고리 UUID/이름**을 참고할 수는 있다.
-- 그렇다고 검색 API·검색 로그·인기 랭킹을 Category가 소유하면 안 된다.  
-  (Category는 “분류”, Search/Listing은 “찾기”)
-
-### 1차 구현 위치 (권장)
+### API 위치 (현재)
 
 ```text
 Product-Post-Service
-  ├─ GET /api/v1/product-posts?keyword=     (기존 일반 검색 — 이후 FULLTEXT 등 개선)
-  ├─ GET /api/v1/search/popular             (추천 검색어)
-  ├─ GET /api/v1/search/related?q=          (연관 검색어)
-  ├─ GET /api/v1/search/suggestions?q=      (자동완성)
-  └─ (내부) 검색 로그 적재 + 배치/스케줄로 Redis 갱신
+  ├─ GET /api/v1/product-posts?keyword=     (일반 검색 — FULLTEXT)
+  ├─ GET /api/v1/search/popular             (추천)
+  ├─ GET /api/v1/search/related?q=          (연관)
+  ├─ GET /api/v1/search/suggestions?q=      (자동완성, 선택)
+  └─ (내부) 비동기 카운터 + @Scheduled Redis 베이크
 ```
 
-Gateway 라우팅만 Product-Post로 추가하면 된다.  
-Category가 필요하면 Product-Post가 Category를 **조회·참고**할 뿐, API 소유는 Product-Post.
+Gateway: `/*/api/v1/search/**` **public** (Auth 불필요).  
+동일 Apps Redis, key prefix `search:`.
 
-### Redis
-
-현재 Redis는 Auth/Gateway 쪽 보안·세션에 쓰인다.  
-검색용은 동일 Redis에 **key prefix `search:`** 로 분리한다.
+### Redis 키
 
 | 키 | 용도 |
 |----|------|
 | `search:terms:h:{yyyyMMddHH}` | 시간 버킷 검색어 ZSET (`ZINCRBY`, TTL ~8일) |
 | `search:terms:agg:{uuid}` | 베이크 시 ZUNIONSTORE 임시 키 |
-| `search:terms:z` | (레거시) 전체 누적 ZSET — 가중 점수 도입 후 미사용 |
-| `search:popular` | 추천 TopN 서빙 LIST (`@Scheduled` 베이크 스냅샷) |
-| `search:popular:bake-lock` | 다중 인스턴스 추천 베이크 분산 락 |
-| `search:cooc:z:{q}` | q 다음 검색어 동시검색 ZSET |
-| `search:cooc:sources` | 동시검색이 발생한 from 검색어 SET |
+| `search:terms:z` | (레거시) 미사용 |
+| `search:popular` | 추천 TopN 서빙 LIST |
+| `search:popular:bake-lock` | 추천 베이크 락 |
+| `search:cooc:z:{q}` | 동시검색 ZSET |
+| `search:cooc:sources` | 동시검색 from 검색어 SET |
 | `search:related:{q}` | 연관 TopN 서빙 LIST |
-| `search:related:bake-lock` | 연관 베이크 분산 락 |
+| `search:related:bake-lock` | 연관 베이크 락 |
 | `search:session:last:{sessionKey}` | 세션 직전 검색어 |
-| `search:suggest:dict` | 자동완성 lex ZSET (`ZRANGEBYLEX`, 베이크 스냅샷) |
-| `search:suggest:bake-lock` | 자동완성 사전 베이크 분산 락 |
-
-연관: 베이크 LIST → YAML 사전 → popular fallback. Redis 연관 맵은 동시검색 베이크로 채움.
+| `search:suggest:dict` | 자동완성 lex ZSET |
+| `search:suggest:bake-lock` | 자동완성 사전 베이크 락 |
 
 ---
 
-## 9. 구현 순서 (합의안)
+## 9. 구현 상태
 
-1. **검색 로그(비동기)** + **추천 검색어 API** (`/search/popular`) — 완료
-2. **연관 검색어 API** (`/search/related`) — 1차는 YAML 사전, 이후 동시검색 — 완료
-3. **일반 검색 연결** — keyword 정규화 + 비동기 Redis 카운터 — 완료
-4. **일반 검색 쿼리 개선** — `LIKE %…%` → MySQL FULLTEXT(ngram, 제목만) — 완료
-5. **추천 TopN 주기 베이크** — `@Scheduled` → `search:popular` 서빙 분리 — 완료
-5-b. **추천 가중 점수(24h/7d)** — 시간 버킷 + 가중 베이크 — 완료
-6. **연관 동시검색 베이크** — 세션 A→B 카운터 → `search:related:{q}` — 완료
-7. **자동완성** `suggestions` — Redis lex 사전 + YAML fallback — 진행
-8. (선택) 최근 검색어(유저별 Redis)
+| # | 항목 | 상태 |
+|---|------|------|
+| 1 | 검색 로그(비동기) + `GET /search/popular` | ✅ |
+| 2 | `GET /search/related` (YAML + popular fallback) | ✅ |
+| 3 | keyword 정규화 + Redis 카운터 + Gateway/Infra Redis | ✅ |
+| 4 | FULLTEXT(ngram, 제목) | ✅ |
+| 5 | 추천 TopN 스케줄 베이크 → `search:popular` | ✅ |
+| 5-b | 가중 점수(24h/7d) + hour 버킷 | ✅ |
+| 6 | 동시검색 베이크 → `search:related:{q}` | ✅ |
+| 7 | (선택) `GET /search/suggestions` | ✅ |
+| 8 | (선택) 최근 검색어(유저별 Redis) | ⬜ **스킵** (FE 추천·연관만 사용 시 불필요) |
 
-### 추천 TopN 베이크 요약
+### 후속(미룬 것)
 
-- 기술: `@Scheduled` (Spring Batch 프레임워크 아님). 주기·키·최소점수는 YAML
-- 기본: `popular-limit=5`, `bake-interval-ms=3600000`(60분)
-- Enter → 현재 시각 hour 버킷 `ZINCRBY` / 스케줄 → 24h·7d 집계 → 가중 점수 → TopN → `popular-serving-key` LIST
-- 가중: `score = count24h × weight-recent-24h + max(0, count7d − count24h) × weight-recent-7d-remainder`
-- 후보 상한: 윈도우별 `bake-candidate-limit`(기본 500) — 전체 멤버 스캔 금지
-- API는 서빙 LIST만 읽음. 비면 YAML seed
-- 다중 인스턴스: Redis `SET NX` 락
-
-### FULLTEXT(ngram) 적용 요약
-
-- 대상: `product_post.product_post_name` 만
-- 인덱스: `ft_pp_name_ngram` (`scripts/add-product-post-name-fulltext.sql`, ddl-auto로는 생성 안 됨)
-- 모드: `NATURAL LANGUAGE MODE`
-- keyword 없음 → 기존 JPQL 목록 / keyword 있음 → native `MATCH`
-- 2글자 미만 → LIKE 폴백 없이 빈 결과 (ngram_token_size=2)
-- 최소 길이는 `product-post.search.fulltext-min-keyword-length` 설정 (하드코딩 금지)
-
-### 아직 미룬 것
-
-- 클릭 가중, 금칙어 필터, Category HTTP 연동
-- 최근 검색어·운영 pin Admin
-- 제목+본문 FULLTEXT, 리드 레플리카
+- 클릭 가중, 금칙어, 운영 pin Admin
+- Category HTTP 연동, 제목+본문 FULLTEXT, 리드 레플리카
 - 자동완성 인기순 정렬(현재 lex 사전순)
-
-
----
-
-## 10. 구현 전 고정하면 좋은 결정
-
-1. 추천: Top 몇 개? 갱신 주기? 운영 pin 여부?
-2. 연관: 1차 범위 = 카테고리/사전만? 동시검색까지?
-3. 일반 검색 FULLTEXT: 같은 스프린트? 다음?
-4. 검색 로그 저장소: Redis 카운터만? MySQL 로그 테이블?
-5. 실패 시: popular/related 빈 배열 vs seed fallback?
+- 최근 검색어
 
 ---
 
-## 11. 팀 설명용 초단문
+## 10. 결정 완료 사항 (구 §10 미결 대체)
 
-- **추천**: 배치 TopN → Redis 서빙. 원본 판매글 안 침.
-- **연관**: 미리 구운 맵 → Redis 서빙. 요청 시 집계 안 함.
-- **일반 검색**: Enter 때만 DB. 인덱스가 타는 쿼리만. UI 트래픽과 분리.
-- **작업 서비스**: Category 아님. **Product-Post-Service** (기존 keyword 검색과 동일 바운디드 컨텍스트).
+| 항목 | 결정 |
+|------|------|
+| 추천 TopN | 기본 **5**, 주기 **60분**, pin 없음 |
+| 연관 | YAML 사전 + 동시검색 베이크 + popular fallback |
+| FULLTEXT | 제목 ngram, 같은 서비스에서 적용 완료 |
+| 로그 저장소 | Redis hour 카운터만 (MySQL 로그 테이블 없음) |
+| 실패 시 | popular → seed / related → YAML → popular / suggestions → seed·related prefix |
+| 최근 검색어 | 이번 범위 **안 함** |
+
+---
+
+## 11. FE 연동 매핑
+
+명세: [search-api.md](./search-api.md)  
+공통 응답: `{ "terms": ["…"] }` · Auth 불필요
+
+| 화면/시점 | API |
+|-----------|-----|
+| 검색창 비었을 때 | `GET /api/v1/search/popular` |
+| 검색 후·사이드 연관 | `GET /api/v1/search/related?q=` |
+| (선택) 타이핑 자동완성 | `GET /api/v1/search/suggestions?q=` (**2글자 이상**) |
+| Enter 상품 목록 | `GET /api/v1/product-posts?keyword=` |
+
+목록 검색 시 연관 품질용(선택): `X-Member-Uuid` 또는 `X-Search-Session-Id`
+
+---
+
+## 12. 팀 설명용 초단문
+
+- **추천**: 배치(가중) TopN → Redis 서빙. 원본 판매글 안 침.
+- **연관**: 베이크/YAML 맵 → Redis·설정 서빙. 요청 시 집계 안 함.
+- **일반 검색**: Enter 때만 DB FULLTEXT. UI 트래픽과 분리.
+- **자동완성(선택)**: Redis lex 사전. DB 안 침.
+- **작업 서비스**: Category 아님. **Product-Post-Service**.
+- **최근 검색어**: 이번 범위 제외.
