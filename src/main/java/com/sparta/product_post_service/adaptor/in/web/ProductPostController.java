@@ -89,6 +89,9 @@ public class ProductPostController {
 			@RequestParam(required = false) Long maxPrice,
 			@RequestParam(required = false) List<String> conditionGrades,
 			@RequestParam(required = false) List<String> documentTypes,
+			@RequestParam(required = false) Double centerLatitude,
+			@RequestParam(required = false) Double centerLongitude,
+			@RequestParam(required = false) Double radiusKm,
 			@RequestParam(defaultValue = "1") int page,
 			@RequestParam(defaultValue = "20") int size,
 			@RequestHeader(value = InternalAuthHeaders.MEMBER_UUID, required = false) String searcherMemberUuid,
@@ -106,6 +109,9 @@ public class ProductPostController {
 						maxPrice,
 						conditionGrades,
 						documentTypes,
+						centerLatitude,
+						centerLongitude,
+						radiusKm,
 						page,
 						size
 				)

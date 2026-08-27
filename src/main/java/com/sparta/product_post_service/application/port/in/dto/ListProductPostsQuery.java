@@ -30,6 +30,12 @@ public class ListProductPostsQuery {
 	private final List<String> conditionGrades;
 	// 인증 서류 종류 (WARRANTY/RECEIPT/APPRAISAL/OTHER) — 선택 중 하나라도 있으면 포함(OR)
 	private final List<String> documentTypes;
+	// 조회 중심 위도 (동네인증·GPS, memberUuid 없을 때 필수)
+	private final Double centerLatitude;
+	// 조회 중심 경도
+	private final Double centerLongitude;
+	// 반경 km (미전달 시 product-post.policy.search-radius-km)
+	private final Double radiusKm;
 	// 1-based 페이지 번호
 	private final int page;
 	// 페이지 크기

@@ -20,9 +20,11 @@ import com.sparta.product_post_service.application.port.in.dto.ProductPostSummar
 import com.sparta.product_post_service.application.port.out.ProductPostLoadPort;
 import com.sparta.product_post_service.application.port.out.dto.ProductPostCardPageProjection;
 import com.sparta.product_post_service.application.port.out.dto.ProductPostListCriteria;
+import com.sparta.product_post_service.application.support.ProductPostListGeoFilterResolver;
 import com.sparta.product_post_service.application.support.SearchSessionKeyResolver;
 import com.sparta.product_post_service.application.support.SearchTermNormalizer;
 import com.sparta.product_post_service.config.SearchProperties;
+import com.sparta.product_post_service.application.port.out.dto.ProductPostListGeoFilter;
 import com.sparta.product_post_service.domain.exception.ProductPostNotFoundException;
 import com.sparta.product_post_service.domain.model.DocumentType;
 import com.sparta.product_post_service.domain.model.ProductPost;
@@ -51,6 +53,8 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 	private final SearchSessionKeyResolver searchSessionKeyResolver;
 	// 검색 정책 (키워드 길이 등)
 	private final SearchProperties searchProperties;
+	// 목록 반경 필터 해석
+	private final ProductPostListGeoFilterResolver productPostListGeoFilterResolver;
 
 	// 공개 판매글 상세 조회 (HIDDEN·DELETED는 미존재와 동일 처리)
 	@Override
@@ -94,6 +98,16 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 			return emptyCardPage(page, size);
 		}
 
+		ProductPostListGeoFilter geoFilter = productPostListGeoFilterResolver.resolve(
+				memberUuid,
+				query.getCenterLatitude(),
+				query.getCenterLongitude(),
+				query.getRadiusKm()
+		);
+		if (geoFilter.isMissingCenterCoordinates()) {
+			return emptyCardPage(page, size);
+		}
+
 		ProductPostCardPageProjection projection = productPostLoadPort.findCards(
 				ProductPostListCriteria.builder()
 						.productPostStatus(ProductPostStatus.PUBLIC)
@@ -105,6 +119,7 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 						.maxPrice(maxPrice)
 						.conditionGrades(conditionGrades)
 						.documentTypes(documentTypes)
+						.geoFilter(geoFilter)
 						.page(page - 1)
 						.size(size)
 						.build()

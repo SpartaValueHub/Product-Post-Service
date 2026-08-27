@@ -3,6 +3,7 @@ package com.sparta.product_post_service.application.port.out.dto;
 import java.util.List;
 
 import com.sparta.product_post_service.domain.model.DocumentType;
+import com.sparta.product_post_service.application.port.out.dto.ProductPostListGeoFilter;
 import com.sparta.product_post_service.domain.model.ProductPostStatus;
 import com.sparta.product_post_service.domain.model.TradeStatus;
 
@@ -32,6 +33,8 @@ public class ProductPostListCriteria {
 	private final List<String> conditionGrades;
 	// 서류 종류 목록 (비어 있으면 미적용, OR 매칭)
 	private final List<DocumentType> documentTypes;
+	// 반경 필터 (Application이 memberUuid·좌표 정책으로 해석)
+	private final ProductPostListGeoFilter geoFilter;
 	// 0-based 페이지 번호
 	private final int page;
 	// 페이지 크기

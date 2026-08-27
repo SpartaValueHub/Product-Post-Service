@@ -29,6 +29,8 @@ import com.sparta.product_post_service.application.port.out.ProductPostLoadPort;
 import com.sparta.product_post_service.application.port.out.dto.ProductPostCardPageProjection;
 import com.sparta.product_post_service.application.port.out.dto.ProductPostCardProjection;
 import com.sparta.product_post_service.application.port.out.dto.ProductPostListCriteria;
+import com.sparta.product_post_service.application.port.out.dto.ProductPostListGeoFilter;
+import com.sparta.product_post_service.application.support.ProductPostListGeoFilterResolver;
 import com.sparta.product_post_service.application.support.SearchSessionKeyResolver;
 import com.sparta.product_post_service.config.SearchProperties;
 import com.sparta.product_post_service.domain.model.ProductPostStatus;
@@ -49,6 +51,9 @@ class ProductPostQueryServiceListTest {
 	@Mock
 	private SearchProperties searchProperties;
 
+	@Mock
+	private ProductPostListGeoFilterResolver productPostListGeoFilterResolver;
+
 	@InjectMocks
 	private ProductPostQueryService productPostQueryService;
 
@@ -57,6 +62,27 @@ class ProductPostQueryServiceListTest {
 		lenient().when(searchProperties.keywordMaxLength()).thenReturn(50);
 		lenient().when(searchProperties.fulltextMinKeywordLength()).thenReturn(2);
 		lenient().when(searchSessionKeyResolver.resolve(any(), any())).thenReturn(null);
+		lenient().when(productPostListGeoFilterResolver.resolve(any(), any(), any(), any()))
+				.thenAnswer(invocation -> {
+					String memberUuid = invocation.getArgument(0);
+					Double centerLatitude = invocation.getArgument(1);
+					Double centerLongitude = invocation.getArgument(2);
+					if (memberUuid != null) {
+						return ProductPostListGeoFilter.disabled();
+					}
+					if (centerLatitude == null || centerLongitude == null) {
+						return ProductPostListGeoFilter.missingCenter();
+					}
+					return ProductPostListGeoFilter.active(
+							centerLatitude,
+							centerLongitude,
+							3D,
+							centerLatitude - 0.1D,
+							centerLatitude + 0.1D,
+							centerLongitude - 0.1D,
+							centerLongitude + 0.1D
+					);
+				});
 	}
 
 	@Test
@@ -73,7 +99,34 @@ class ProductPostQueryServiceListTest {
 								.filter(TradeStatus::isListVisible)
 								.toList()
 				);
+		assertThat(criteria.getGeoFilter().isDistanceFilterEnabled()).isTrue();
 		verify(searchTermRecordingService, never()).recordAsync(anyString(), any());
+	}
+
+	@Test
+	void list_withoutCenterCoordinates_returnsEmptyWithoutDbLookup() {
+		ProductPostCardPageDto result = productPostQueryService.list(
+				ListProductPostsQuery.builder()
+						.tradeStatus("SELLING")
+						.page(1)
+						.size(20)
+						.build()
+		);
+
+		assertThat(result.getContent()).isEmpty();
+		assertThat(result.getTotalElements()).isZero();
+		verify(productPostLoadPort, never()).findCards(any());
+	}
+
+	@Test
+	void list_withMemberUuid_skipsDistanceFilter() {
+		stubEmptyPage();
+
+		productPostQueryService.list(baseQuery("SELLING").memberUuid("member-1").build());
+
+		ProductPostListCriteria criteria = captureCriteria();
+		assertThat(criteria.getMemberUuid()).isEqualTo("member-1");
+		assertThat(criteria.getGeoFilter().isDistanceFilterEnabled()).isFalse();
 	}
 
 	@Test
@@ -179,6 +232,8 @@ class ProductPostQueryServiceListTest {
 	private ListProductPostsQuery.ListProductPostsQueryBuilder baseQuery(String tradeStatus) {
 		return ListProductPostsQuery.builder()
 				.tradeStatus(tradeStatus)
+				.centerLatitude(35.1159D)
+				.centerLongitude(129.0403D)
 				.page(1)
 				.size(20);
 	}

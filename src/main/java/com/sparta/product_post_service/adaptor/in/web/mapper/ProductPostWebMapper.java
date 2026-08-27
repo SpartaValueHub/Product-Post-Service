@@ -120,6 +120,9 @@ public final class ProductPostWebMapper {
 			Long maxPrice,
 			List<String> conditionGrades,
 			List<String> documentTypes,
+			Double centerLatitude,
+			Double centerLongitude,
+			Double radiusKm,
 			int page,
 			int size
 	) {
@@ -134,6 +137,9 @@ public final class ProductPostWebMapper {
 				.maxPrice(maxPrice)
 				.conditionGrades(conditionGrades)
 				.documentTypes(documentTypes)
+				.centerLatitude(centerLatitude)
+				.centerLongitude(centerLongitude)
+				.radiusKm(radiusKm)
 				.page(page)
 				.size(size)
 				.build();
