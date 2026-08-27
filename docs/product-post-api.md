@@ -134,9 +134,9 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
 | regionGu | string | N | 거래 희망 구(시군구). 최대 50자. FE 표시 2순위 (`regionDong` 없을 때) |
 | images | array | Y | 1~10개. **배열 순서 = 노출 순서**(0번 인덱스가 대표/썸네일). 서버가 `sort_order` 1..n 부여 |
 | images[].imageUrl | string | Y | 최대 500자. Presign `publicUrl`(pending) 또는 이미 승격된 `posts/` CloudFront URL. 저장 값은 정식 URL |
-| documents | array | N | 선택 |
-| documents[].documentType | string | Y(항목 시) | `WARRANTY` \| `RECEIPT` \| `APPRAISAL` |
-| documents[].imageUrl | string | Y(항목 시) | 최대 500자 |
+| documents | array | Y | 최소 1개. `documentType`별 최대 2개 (`WARRANTY`/`RECEIPT`/`APPRAISAL`/`OTHER` 각 2 → 합계 최대 8). `OTHER`만으로도 최소 1개 충족 가능 |
+| documents[].documentType | string | Y | `WARRANTY` \| `RECEIPT` \| `APPRAISAL` \| `OTHER` |
+| documents[].imageUrl | string | Y | 최대 500자 |
 
 ```json
 {
@@ -223,8 +223,8 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
 
 | status | code | 의미 |
 |--------|------|------|
-| 400 | VALIDATION_FAILED | 요청 필드 검증 실패 (최소가 미만 포함, 설정값 기준) |
-| 400 | INVALID_ARGUMENT | Domain 규칙 위반 등 |
+| 400 | VALIDATION_FAILED | 요청 필드 검증 실패 (최소가 미만, 서류 미포함·개수 초과 포함) |
+| 400 | INVALID_ARGUMENT | Domain 규칙 위반 등 (서류 종류별 최대 2개 초과 포함) |
 | 400 | INVALID_MEDIA_KEY | 미디어 URL/key 형식 오류 |
 | 400 | MEDIA_OBJECT_NOT_FOUND | pending 객체가 S3에 없음 |
 | 401 | UNAUTHORIZED | `X-Member-Uuid` 없음 |
@@ -265,9 +265,9 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
 | Body | regionGu | string | N | 거래 희망 구(시군구). 최대 50자. blank/미전달 시 null 저장 |
 | Body | images | array | Y | 1~10개. **전체 교체**. 배열 순서 = 노출 순서, 빠진 기존 이미지는 soft delete |
 | Body | images[].imageUrl | string | Y | 최대 500자. Presign pending URL 또는 유지할 정식 `posts/` URL |
-| Body | documents | array | N | **전체 교체**. 빈 배열이면 기존 서류 전부 soft delete |
-| Body | documents[].documentType | string | Y(항목 시) | `WARRANTY` \| `RECEIPT` \| `APPRAISAL` |
-| Body | documents[].imageUrl | string | Y(항목 시) | 최대 500자 |
+| Body | documents | array | Y | 최소 1개. **전체 교체**. `documentType`별 최대 2개 (합계 최대 8). 빈 배열·생략 불가 |
+| Body | documents[].documentType | string | Y | `WARRANTY` \| `RECEIPT` \| `APPRAISAL` \| `OTHER` |
+| Body | documents[].imageUrl | string | Y | 최대 500자 |
 
 수정 가능 조건:
 - `tradeStatus` = `SELLING` (예약중·거래완료는 수정 불가, 거래상태 API 별도)
@@ -290,7 +290,9 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
     { "imageUrl": "https://cdn.example.com/product-posts/1-new.jpg" },
     { "imageUrl": "https://cdn.example.com/product-posts/2-new.jpg" }
   ],
-  "documents": []
+  "documents": [
+    { "documentType": "RECEIPT", "imageUrl": "https://cdn.example.com/docs/receipt.jpg" }
+  ]
 }
 ```
 
@@ -303,8 +305,8 @@ Product-Post-Service 판매글(ProductPost) API 명세서입니다.
 
 | status | code | 의미 |
 |--------|------|------|
-| 400 | VALIDATION_FAILED | 요청 필드 검증 실패 |
-| 400 | INVALID_ARGUMENT | Domain 규칙 위반 (예: 판매중이 아님, 최소가 미만) |
+| 400 | VALIDATION_FAILED | 요청 필드 검증 실패 (서류 미포함·개수 초과 포함) |
+| 400 | INVALID_ARGUMENT | Domain 규칙 위반 (예: 판매중이 아님, 최소가 미만, 서류 종류별 최대 2개 초과) |
 | 400 | INVALID_MEDIA_KEY | 미디어 URL/key 형식 오류 |
 | 400 | MEDIA_OBJECT_NOT_FOUND | pending 객체가 S3에 없음 |
 | 401 | UNAUTHORIZED | `X-Member-Uuid` 없음 |
@@ -633,7 +635,7 @@ Body 없음.
 | minPrice | number | N | 0 이상. maxPrice보다 클 수 없음 |
 | maxPrice | number | N | 0 이상 |
 | conditionGrades | string[] | N | `S`/`A`/`B`/`C`. 없으면 전체 |
-| documentTypes | string[] | N | `WARRANTY`/`RECEIPT`/`APPRAISAL`. 선택값 중 **하나라도** 가진 글(OR). 삭제된 서류 제외 |
+| documentTypes | string[] | N | `WARRANTY`/`RECEIPT`/`APPRAISAL`/`OTHER`. 선택값 중 **하나라도** 가진 글(OR). 삭제된 서류 제외 |
 | page | number | N | 1-based, 기본 `1` |
 | size | number | N | 기본 `20`, 최대 `50` |
 

@@ -68,7 +68,8 @@ public class CreateProductPostRequestVo {
 	@Valid
 	private List<CreateProductPostImageRequestVo> images;
 
-	// 서류 목록 (선택)
+	// 서류 목록 (최소 1. 종류별·합계 상한은 Domain 검증)
+	@NotEmpty(message = "서류는 최소 1개 필요합니다.")
 	@Valid
 	private List<CreateProductPostDocumentRequestVo> documents;
 }

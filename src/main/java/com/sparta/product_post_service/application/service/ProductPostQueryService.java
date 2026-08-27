@@ -257,7 +257,7 @@ public class ProductPostQueryService implements GetProductPostUseCase, ListProdu
 						return DocumentType.valueOf(type);
 					} catch (IllegalArgumentException ex) {
 						throw new IllegalArgumentException(
-								"서류 종류는 WARRANTY, RECEIPT, APPRAISAL 중 하나여야 합니다."
+								"서류 종류는 " + DocumentType.allowedNamesCsv() + " 중 하나여야 합니다."
 						);
 					}
 				})
