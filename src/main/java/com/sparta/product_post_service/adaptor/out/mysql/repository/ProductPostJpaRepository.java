@@ -12,9 +12,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.sparta.product_post_service.adaptor.out.mysql.entity.ProductPostEntity;
-import com.sparta.product_post_service.domain.model.DocumentType;
-import com.sparta.product_post_service.domain.model.ProductPostStatus;
-import com.sparta.product_post_service.domain.model.TradeStatus;
 
 // 판매글 JPA Repository (Application에서는 Adapter를 통해서만 사용)
 public interface ProductPostJpaRepository extends JpaRepository<ProductPostEntity, Long> {
@@ -32,32 +29,70 @@ public interface ProductPostJpaRepository extends JpaRepository<ProductPostEntit
 			""")
 	int updateTradeStatus(
 			@Param("productPostId") Long productPostId,
-			@Param("tradeStatus") TradeStatus tradeStatus,
+			@Param("tradeStatus") com.sparta.product_post_service.domain.model.TradeStatus tradeStatus,
 			@Param("updatedAt") Instant updatedAt
 	);
 
-	// FO 목록 (keyword 없음 — JPQL, 인덱스 필터 경로)
-	@Query("""
-			SELECT p FROM ProductPostEntity p
-			WHERE p.productPostStatus = :productPostStatus
-			  AND p.deletedAt IS NULL
-			  AND p.tradeStatus IN :tradeStatuses
-			  AND (:hasCategories = false OR p.categoryUuid IN :categoryUuids)
-			  AND (:memberUuid IS NULL OR p.memberUuid = :memberUuid)
-			  AND (:minPrice IS NULL OR p.price >= :minPrice)
-			  AND (:maxPrice IS NULL OR p.price <= :maxPrice)
-			  AND (:hasGrades = false OR p.conditionGrade IN :conditionGrades)
-			  AND (:hasDocumentTypes = false OR EXISTS (
-			        SELECT 1 FROM ProductPostDocumentEntity d
-			        WHERE d.productPostId = p.productPostId
-			          AND d.deletedAt IS NULL
-			          AND d.documentType IN :documentTypes
-			  ))
-			ORDER BY CASE WHEN p.bumpedAt IS NULL THEN p.createdAt ELSE p.bumpedAt END DESC
-			""")
+	// FO 목록 (keyword 없음 — native, 반경 필터 포함)
+	@Query(
+			value = """
+					SELECT * FROM product_post p
+					WHERE p.product_post_status = :productPostStatus
+					  AND p.deleted_at IS NULL
+					  AND p.trade_status IN (:tradeStatuses)
+					  AND (:hasCategories = false OR p.category_uuid IN (:categoryUuids))
+					  AND (:memberUuid IS NULL OR p.member_uuid = :memberUuid)
+					  AND (:minPrice IS NULL OR p.price >= :minPrice)
+					  AND (:maxPrice IS NULL OR p.price <= :maxPrice)
+					  AND (:hasGrades = false OR p.condition_grade IN (:conditionGrades))
+					  AND (:hasDocumentTypes = false OR EXISTS (
+					        SELECT 1 FROM product_post_document d
+					        WHERE d.product_post_id = p.product_post_id
+					          AND d.deleted_at IS NULL
+					          AND d.document_type IN (:documentTypes)
+					  ))
+					  AND (:hasGeoFilter = false OR (
+					        p.latitude BETWEEN :minLat AND :maxLat
+					        AND p.longitude BETWEEN :minLng AND :maxLng
+					        AND (6371 * acos(GREATEST(-1, LEAST(1,
+					              cos(radians(:centerLat)) * cos(radians(p.latitude))
+					              * cos(radians(p.longitude) - radians(:centerLng))
+					              + sin(radians(:centerLat)) * sin(radians(p.latitude))
+					        )))) <= :radiusKm
+					  ))
+					ORDER BY CASE WHEN p.bumped_at IS NULL THEN p.created_at ELSE p.bumped_at END DESC
+					""",
+			countQuery = """
+					SELECT COUNT(*) FROM product_post p
+					WHERE p.product_post_status = :productPostStatus
+					  AND p.deleted_at IS NULL
+					  AND p.trade_status IN (:tradeStatuses)
+					  AND (:hasCategories = false OR p.category_uuid IN (:categoryUuids))
+					  AND (:memberUuid IS NULL OR p.member_uuid = :memberUuid)
+					  AND (:minPrice IS NULL OR p.price >= :minPrice)
+					  AND (:maxPrice IS NULL OR p.price <= :maxPrice)
+					  AND (:hasGrades = false OR p.condition_grade IN (:conditionGrades))
+					  AND (:hasDocumentTypes = false OR EXISTS (
+					        SELECT 1 FROM product_post_document d
+					        WHERE d.product_post_id = p.product_post_id
+					          AND d.deleted_at IS NULL
+					          AND d.document_type IN (:documentTypes)
+					  ))
+					  AND (:hasGeoFilter = false OR (
+					        p.latitude BETWEEN :minLat AND :maxLat
+					        AND p.longitude BETWEEN :minLng AND :maxLng
+					        AND (6371 * acos(GREATEST(-1, LEAST(1,
+					              cos(radians(:centerLat)) * cos(radians(p.latitude))
+					              * cos(radians(p.longitude) - radians(:centerLng))
+					              + sin(radians(:centerLat)) * sin(radians(p.latitude))
+					        )))) <= :radiusKm
+					  ))
+					""",
+			nativeQuery = true
+	)
 	Page<ProductPostEntity> searchForList(
-			@Param("productPostStatus") ProductPostStatus productPostStatus,
-			@Param("tradeStatuses") Collection<TradeStatus> tradeStatuses,
+			@Param("productPostStatus") String productPostStatus,
+			@Param("tradeStatuses") Collection<String> tradeStatuses,
 			@Param("hasCategories") boolean hasCategories,
 			@Param("categoryUuids") Collection<String> categoryUuids,
 			@Param("memberUuid") String memberUuid,
@@ -66,12 +101,19 @@ public interface ProductPostJpaRepository extends JpaRepository<ProductPostEntit
 			@Param("hasGrades") boolean hasGrades,
 			@Param("conditionGrades") Collection<String> conditionGrades,
 			@Param("hasDocumentTypes") boolean hasDocumentTypes,
-			@Param("documentTypes") Collection<DocumentType> documentTypes,
+			@Param("documentTypes") Collection<String> documentTypes,
+			@Param("hasGeoFilter") boolean hasGeoFilter,
+			@Param("centerLat") double centerLat,
+			@Param("centerLng") double centerLng,
+			@Param("radiusKm") double radiusKm,
+			@Param("minLat") double minLat,
+			@Param("maxLat") double maxLat,
+			@Param("minLng") double minLng,
+			@Param("maxLng") double maxLng,
 			Pageable pageable
 	);
 
 	// FO 목록 + 제목 FULLTEXT(ngram). ft_pp_name_ngram 인덱스 필요 (scripts/add-product-post-name-fulltext.sql)
-	// tradeStatuses·documentTypes 는 native IN 바인딩용 enum name 문자열
 	@Query(
 			value = """
 					SELECT * FROM product_post p
@@ -89,6 +131,15 @@ public interface ProductPostJpaRepository extends JpaRepository<ProductPostEntit
 					        WHERE d.product_post_id = p.product_post_id
 					          AND d.deleted_at IS NULL
 					          AND d.document_type IN (:documentTypes)
+					  ))
+					  AND (:hasGeoFilter = false OR (
+					        p.latitude BETWEEN :minLat AND :maxLat
+					        AND p.longitude BETWEEN :minLng AND :maxLng
+					        AND (6371 * acos(GREATEST(-1, LEAST(1,
+					              cos(radians(:centerLat)) * cos(radians(p.latitude))
+					              * cos(radians(p.longitude) - radians(:centerLng))
+					              + sin(radians(:centerLat)) * sin(radians(p.latitude))
+					        )))) <= :radiusKm
 					  ))
 					ORDER BY CASE WHEN p.bumped_at IS NULL THEN p.created_at ELSE p.bumped_at END DESC
 					""",
@@ -109,6 +160,15 @@ public interface ProductPostJpaRepository extends JpaRepository<ProductPostEntit
 					          AND d.deleted_at IS NULL
 					          AND d.document_type IN (:documentTypes)
 					  ))
+					  AND (:hasGeoFilter = false OR (
+					        p.latitude BETWEEN :minLat AND :maxLat
+					        AND p.longitude BETWEEN :minLng AND :maxLng
+					        AND (6371 * acos(GREATEST(-1, LEAST(1,
+					              cos(radians(:centerLat)) * cos(radians(p.latitude))
+					              * cos(radians(p.longitude) - radians(:centerLng))
+					              + sin(radians(:centerLat)) * sin(radians(p.latitude))
+					        )))) <= :radiusKm
+					  ))
 					""",
 			nativeQuery = true
 	)
@@ -125,6 +185,14 @@ public interface ProductPostJpaRepository extends JpaRepository<ProductPostEntit
 			@Param("conditionGrades") Collection<String> conditionGrades,
 			@Param("hasDocumentTypes") boolean hasDocumentTypes,
 			@Param("documentTypes") Collection<String> documentTypes,
+			@Param("hasGeoFilter") boolean hasGeoFilter,
+			@Param("centerLat") double centerLat,
+			@Param("centerLng") double centerLng,
+			@Param("radiusKm") double radiusKm,
+			@Param("minLat") double minLat,
+			@Param("maxLat") double maxLat,
+			@Param("minLng") double minLng,
+			@Param("maxLng") double maxLng,
 			Pageable pageable
 	);
 }

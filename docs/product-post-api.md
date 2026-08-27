@@ -636,15 +636,23 @@ Body 없음.
 | maxPrice | number | N | 0 이상 |
 | conditionGrades | string[] | N | `S`/`A`/`B`/`C`. 없으면 전체 |
 | documentTypes | string[] | N | `WARRANTY`/`RECEIPT`/`APPRAISAL`/`OTHER`. 선택값 중 **하나라도** 가진 글(OR). 삭제된 서류 제외 |
+| centerLatitude | number | Y* | 조회 중심 위도. `memberUuid` 없을 때 **필수** (동네인증 중심·비회원 GPS) |
+| centerLongitude | number | Y* | 조회 중심 경도. `memberUuid` 없을 때 **필수** |
+| radiusKm | number | N | 반경 km. 미전달 시 `product-post.policy.search-radius-km` (기본 3). 판매글 **거래희망장소**(`latitude`/`longitude`) 기준 |
 | page | number | N | 1-based, 기본 `1` |
 | size | number | N | 기본 `20`, 최대 `50` |
 
+\* `memberUuid`가 있으면(마이페이지·프로필 판매글) 반경 필터 **미적용** — 좌표 생략 가능.  
+\* `memberUuid` 없고 좌표도 없으면 **빈 목록** (`content: []`, `totalElements: 0`).
+
 정렬: `COALESCE(bumpedAt, createdAt) DESC` (끌올 반영 최신순)  
 노출: `productPostStatus=PUBLIC` 이고 `tradeStatus` ∈ 요청값(또는 미전달 시 `SELLING`\|`RESERVED`\|`SOLD_OUT`) (HIDDEN·DELETED 제외)  
+거리: `memberUuid` 없을 때 `(centerLatitude, centerLongitude)` 기준 `radiusKm` 이내 거래희망장소만 (Haversine + 바운딩 박스)  
 `totalElements` / `totalPages`는 **필터 적용 후** 건수·페이지 수.
 
 ```http
-GET /api/v1/product-posts?categoryUuids=uuid1&documentTypes=RECEIPT&documentTypes=WARRANTY&page=1&size=20
+GET /api/v1/product-posts?categoryUuids=uuid1&centerLatitude=35.1159&centerLongitude=129.0403&page=1&size=20
+GET /api/v1/product-posts?keyword=한정판&centerLatitude=35.1159&centerLongitude=129.0403&page=1&size=20
 GET /api/v1/product-posts?memberUuid=550e8400-e29b-41d4-a716-446655440000&page=1&size=4
 GET /api/v1/product-posts?memberUuid=550e8400-e29b-41d4-a716-446655440000&tradeStatus=SELLING&page=1&size=20
 GET /api/v1/product-posts?memberUuid=550e8400-e29b-41d4-a716-446655440000&tradeStatus=RESERVED&page=1&size=20
@@ -699,4 +707,4 @@ GET /api/v1/product-posts?tradeStatus=SELLING&page=1&size=20
 
 | status | code | 의미 |
 |--------|------|------|
-| 400 | INVALID_ARGUMENT | page/size/가격 범위/등급/서류 종류/`tradeStatus` 값 오류 |
+| 400 | INVALID_ARGUMENT | page/size/가격 범위/등급/서류 종류/`tradeStatus`/좌표·반경 값 오류 |

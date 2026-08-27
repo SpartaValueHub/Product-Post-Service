@@ -71,12 +71,21 @@ public class ProductPostLoadAdapter implements ProductPostLoadPort {
 		List<String> conditionGrades = hasGrades ? criteria.getConditionGrades() : UNUSED_STRINGS;
 		List<DocumentType> documentTypes = hasDocumentTypes ? criteria.getDocumentTypes() : UNUSED_DOCUMENT_TYPES;
 		List<String> documentTypeNames = documentTypes.stream().map(Enum::name).toList();
+		List<String> tradeStatusNames = criteria.getTradeStatuses().stream().map(Enum::name).toList();
+		boolean hasGeoFilter = criteria.getGeoFilter().isDistanceFilterEnabled();
+		double centerLat = criteria.getGeoFilter().getCenterLatitude();
+		double centerLng = criteria.getGeoFilter().getCenterLongitude();
+		double radiusKm = criteria.getGeoFilter().getRadiusKm();
+		double minLat = criteria.getGeoFilter().getMinLatitude();
+		double maxLat = criteria.getGeoFilter().getMaxLatitude();
+		double minLng = criteria.getGeoFilter().getMinLongitude();
+		double maxLng = criteria.getGeoFilter().getMaxLongitude();
 
 		Page<ProductPostEntity> page;
 		if (keyword == null) {
 			page = productPostJpaRepository.searchForList(
-					criteria.getProductPostStatus(),
-					criteria.getTradeStatuses(),
+					criteria.getProductPostStatus().name(),
+					tradeStatusNames,
 					hasCategories,
 					categoryUuids,
 					memberUuid,
@@ -85,13 +94,21 @@ public class ProductPostLoadAdapter implements ProductPostLoadPort {
 					hasGrades,
 					conditionGrades,
 					hasDocumentTypes,
-					documentTypes,
+					documentTypeNames,
+					hasGeoFilter,
+					centerLat,
+					centerLng,
+					radiusKm,
+					minLat,
+					maxLat,
+					minLng,
+					maxLng,
 					pageable
 			);
 		} else {
 			page = productPostJpaRepository.searchForListByKeyword(
 					criteria.getProductPostStatus().name(),
-					criteria.getTradeStatuses().stream().map(Enum::name).toList(),
+					tradeStatusNames,
 					hasCategories,
 					categoryUuids,
 					memberUuid,
@@ -102,6 +119,14 @@ public class ProductPostLoadAdapter implements ProductPostLoadPort {
 					conditionGrades,
 					hasDocumentTypes,
 					documentTypeNames,
+					hasGeoFilter,
+					centerLat,
+					centerLng,
+					radiusKm,
+					minLat,
+					maxLat,
+					minLng,
+					maxLng,
 					pageable
 			);
 		}
