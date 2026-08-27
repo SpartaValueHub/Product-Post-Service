@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CreateProductPostDocumentRequestVo {
 
-	// 서류 종류 (WARRANTY | RECEIPT | APPRAISAL)
+	// 서류 종류 (WARRANTY | RECEIPT | APPRAISAL | OTHER)
 	@NotNull(message = "서류 종류는 필수입니다.")
 	private DocumentType documentType;
 

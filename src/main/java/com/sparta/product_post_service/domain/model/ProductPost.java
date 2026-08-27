@@ -3,7 +3,9 @@ package com.sparta.product_post_service.domain.model;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
@@ -25,6 +27,8 @@ public class ProductPost {
 	// 상품 사진 최소·최대 개수
 	private static final int IMAGE_MIN_COUNT = 1;
 	private static final int IMAGE_MAX_COUNT = 10;
+	// 서류 최소 개수 (전체)
+	private static final int DOCUMENT_MIN_COUNT = 1;
 	// 허용 상품 상태 등급
 	private static final Set<String> ALLOWED_CONDITION_GRADES = Set.of("S", "A", "B", "C");
 
@@ -68,7 +72,7 @@ public class ProductPost {
 	private Instant deletedAt;
 	// 상품 이미지 목록
 	private final List<ProductPostImage> images = new ArrayList<>();
-	// 서류 목록 (선택)
+	// 서류 목록 (등록·수정 시 최소 1개, 종류별 최대 2개. OTHER 포함)
 	private final List<ProductPostDocument> documents = new ArrayList<>();
 
 	private ProductPost(
@@ -151,9 +155,10 @@ public class ProductPost {
 		String normalizedRegionDong = normalizeRegionLabel(regionDong, "거래 희망 동");
 		String normalizedRegionGu = normalizeRegionLabel(regionGu, "거래 희망 구");
 		validateImages(images);
+		validateDocuments(documents);
 		Objects.requireNonNull(createdAt, "생성 시각은 필수입니다.");
 
-		List<ProductPostDocument> safeDocuments = documents == null ? List.of() : List.copyOf(documents);
+		List<ProductPostDocument> safeDocuments = List.copyOf(documents);
 
 		return new ProductPost(
 				null,
@@ -375,13 +380,13 @@ public class ProductPost {
 
 	// 기존 활성 서류 soft delete 후 신규 목록으로 교체
 	private void replaceDocuments(List<ProductPostDocument> replacementDocuments, Instant updatedAt) {
-		List<ProductPostDocument> safeDocuments = replacementDocuments == null ? List.of() : replacementDocuments;
+		validateDocuments(replacementDocuments);
 		for (ProductPostDocument document : documents) {
 			if (document.isActive()) {
 				document.softDelete(updatedAt);
 			}
 		}
-		documents.addAll(safeDocuments);
+		documents.addAll(replacementDocuments);
 	}
 
 	private static void validateUuid(String value, String message) {
@@ -451,11 +456,36 @@ public class ProductPost {
 	}
 
 	private static void validateImages(List<ProductPostImage> images) {
-		if (images == null || images.isEmpty()) {
+		if (images == null || images.size() < IMAGE_MIN_COUNT) {
 			throw new IllegalArgumentException("상품 사진은 최소 1장 필요합니다.");
 		}
 		if (images.size() > IMAGE_MAX_COUNT) {
 			throw new IllegalArgumentException("상품 사진은 최대 10장까지 가능합니다.");
+		}
+	}
+
+	// 전체 최소 1개, DocumentType별 최대 MAX_COUNT_PER_TYPE개
+	private static void validateDocuments(List<ProductPostDocument> documents) {
+		if (documents == null || documents.size() < DOCUMENT_MIN_COUNT) {
+			throw new IllegalArgumentException("서류는 최소 1개 필요합니다.");
+		}
+		int maxPerType = DocumentType.MAX_COUNT_PER_TYPE;
+		int maxTotal = DocumentType.maxTotalCount();
+		if (documents.size() > maxTotal) {
+			throw new IllegalArgumentException(
+					"서류는 종류별 최대 " + maxPerType + "개씩, 합계 " + maxTotal + "개까지 가능합니다.");
+		}
+		Map<DocumentType, Integer> countByType = new EnumMap<>(DocumentType.class);
+		for (ProductPostDocument document : documents) {
+			Objects.requireNonNull(document, "서류 항목은 필수입니다.");
+			DocumentType documentType = document.getDocumentType();
+			Objects.requireNonNull(documentType, "서류 종류는 필수입니다.");
+			int nextCount = countByType.getOrDefault(documentType, 0) + 1;
+			if (nextCount > maxPerType) {
+				throw new IllegalArgumentException(
+						"서류는 종류별로 최대 " + maxPerType + "개까지 등록할 수 있습니다.");
+			}
+			countByType.put(documentType, nextCount);
 		}
 	}
 }

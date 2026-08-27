@@ -5,7 +5,7 @@ import java.util.Objects;
 
 import lombok.Getter;
 
-// 판매글 서류(보증서·영수증·감정서) 도메인
+// 판매글 서류(보증서·영수증·감정서·기타) 도메인
 @Getter
 public class ProductPostDocument {
 

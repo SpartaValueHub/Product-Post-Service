@@ -68,7 +68,8 @@ public class UpdateProductPostRequestVo {
 	@Valid
 	private List<CreateProductPostImageRequestVo> images;
 
-	// 서류 목록 (선택, 전체 교체)
+	// 서류 목록 (최소 1, 전체 교체. 종류별·합계 상한은 Domain 검증)
+	@NotEmpty(message = "서류는 최소 1개 필요합니다.")
 	@Valid
 	private List<CreateProductPostDocumentRequestVo> documents;
 }
